@@ -1,0 +1,1103 @@
+// ============================================================================
+// INVENTÁRIO - IPE (v4 - SEM paginação)
+// ============================================================================
+
+console.log("[inventario.js] carregado v4 (sem paginação)");
+
+let ordemAtual = { campo: "numero", direcao: "desc" };
+let timerBusca = null;
+let filtrosDisponiveis = { categorias: [], salas: [], status: [] };
+let bensCache = [];
+let isAdmin = false;
+let idDetalheAtual = null;
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await verificarPerfil();
+    await carregarFiltrosDisponiveis();
+    await popularSelectCategoriasModal();
+    await carregarSalas();
+    await restaurarFiltrosDaURL();
+    buscar();
+});
+
+async function verificarPerfil() {
+    try {
+        const res = await fetch("/api/dados_usuario");
+        if (!res.ok) return;
+        const u = await res.json();
+        isAdmin = u.id_perfil === 1;
+
+        const btnImportar = document.getElementById("btn-importar");
+        const btnNovaSala = document.getElementById("btn-nova-sala");
+        const btnNovoPatrimonio = document.getElementById("btn-novo-patrimonio");
+
+        const btnExportarPdf = document.getElementById("btn-exportar-pdf");
+
+if (isAdmin) {
+    if (btnImportar) btnImportar.style.display = "inline-block";
+    if (btnNovaSala) btnNovaSala.style.display = "inline-block";
+    if (btnExportarPdf) btnExportarPdf.style.display = "inline-block";
+    if (btnNovoPatrimonio) btnNovoPatrimonio.style.display = "inline-block";
+} else {
+    if (btnImportar) btnImportar.remove();
+    if (btnNovaSala) btnNovaSala.remove();
+    if (btnExportarPdf) btnExportarPdf.remove();
+    if (btnNovoPatrimonio) btnNovoPatrimonio.remove();
+}
+    } catch {}
+}
+
+function formatarBRL(v) {
+    return "R$ " + parseFloat(v || 0).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+async function carregarFiltrosDisponiveis() {
+    try {
+        const res = await fetch("/api/inventario/filtros");
+        filtrosDisponiveis = await res.json();
+
+        const selCat = document.getElementById("f-categoria");
+        selCat.innerHTML = '<option value="">Todas</option>' +
+            (filtrosDisponiveis.categorias || []).map(c =>
+                `<option value="${c.id_categoria}">${c.nome}</option>`
+            ).join("");
+
+        const selSala = document.getElementById("f-sala");
+        selSala.innerHTML = '<option value="">Todas</option>';
+        const porBloco = {};
+        (filtrosDisponiveis.salas || []).forEach(s => {
+            const b = s.bloco || "Sem bloco";
+            if (!porBloco[b]) porBloco[b] = [];
+            porBloco[b].push(s);
+        });
+        Object.keys(porBloco).sort().forEach(bloco => {
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = bloco;
+            porBloco[bloco].forEach(s => {
+                const opt = document.createElement("option");
+                opt.value = s.id_sala;
+                opt.textContent = s.nome;
+                optgroup.appendChild(opt);
+            });
+            selSala.appendChild(optgroup);
+        });
+
+        const selStatus = document.getElementById("f-status");
+        selStatus.innerHTML = '<option value="">Todos</option>' +
+            (filtrosDisponiveis.status || []).map(s =>
+                `<option value="${s.id_status}">${s.nome}</option>`
+            ).join("");
+
+    } catch (err) {
+        console.error("Erro ao carregar filtros:", err);
+    }
+}
+
+async function popularSelectCategoriasModal() {
+    try {
+        const sel = document.getElementById("select-categorias");
+        if (!sel) return;
+
+        let categorias = filtrosDisponiveis.categorias;
+        if (!categorias || categorias.length === 0) {
+            const res = await fetch("/api/inventario/filtros");
+            const data = await res.json();
+            categorias = data.categorias || [];
+        }
+
+        sel.innerHTML = '<option value="">Selecione uma Categoria...</option>' +
+            categorias.map(c =>
+                `<option value="${c.id_categoria}">${c.nome}</option>`
+            ).join("");
+    } catch (err) {
+        console.error("Erro ao popular categorias do modal:", err);
+    }
+}
+
+function agendarBusca() {
+    clearTimeout(timerBusca);
+    timerBusca = setTimeout(() => buscar(), 350);
+}
+
+async function buscar() {
+    const loading = document.getElementById("loading");
+    const wrapper = document.getElementById("tabela-inventario-wrapper");
+    if (loading) loading.classList.add("show");
+    if (wrapper) wrapper.style.display = "none";
+
+    const params = new URLSearchParams();
+    const busca = document.getElementById("f-busca").value.trim();
+    const categoria = document.getElementById("f-categoria").value;
+    const sala = document.getElementById("f-sala").value;
+    const status = document.getElementById("f-status").value;
+    const valorMin = document.getElementById("f-valor-min").value;
+    const valorMax = document.getElementById("f-valor-max").value;
+    const dataIni = document.getElementById("f-data-ini").value;
+    const dataFim = document.getElementById("f-data-fim").value;
+    const incluirBaixados = document.getElementById("f-incluir-baixados").value;
+
+    if (busca) params.append("busca", busca);
+    if (categoria) params.append("categoria", categoria);
+    if (sala) params.append("sala", sala);
+    if (status) params.append("status", status);
+    if (valorMin) params.append("valor_min", valorMin);
+    if (valorMax) params.append("valor_max", valorMax);
+    if (dataIni) params.append("data_ini", dataIni);
+    if (dataFim) params.append("data_fim", dataFim);
+    if (incluirBaixados === "1") params.append("incluir_baixados", "1");
+    params.append("ordem", ordemAtual.campo);
+    params.append("direcao", ordemAtual.direcao);
+
+    window.history.replaceState({}, "", "?" + params.toString());
+
+    try {
+        const res = await fetch("/api/inventario/buscar?" + params.toString());
+        const data = await res.json();
+
+        if (data.erro) {
+            toast("Erro ao buscar: " + data.erro, "erro");
+            return;
+        }
+
+        bensCache = data.bens || [];
+        renderizarResultados(data);
+        atualizarChips();
+        atualizarBotaoLimpar();
+    } catch (err) {
+        console.error("Erro ao buscar:", err);
+        toast("Erro ao buscar: " + err.message, "erro");
+    } finally {
+        if (loading) loading.classList.remove("show");
+        if (wrapper) wrapper.style.display = "table";
+    }
+}
+
+function renderizarResultados(data) {
+    const tbody = document.getElementById("tabela-inventario");
+    const info = document.getElementById("resultados-info");
+
+    if (data.total === 0) {
+        info.innerHTML = "Nenhum patrimônio encontrado.";
+    } else {
+        info.innerHTML = `<strong>${data.total}</strong> patrimônio(s) em <strong>${data.categorias_distintas}</strong> categoria(s).`;
+    }
+
+    document.getElementById("total-compra").innerText = formatarBRL(data.valor_total_compra);
+    document.getElementById("total-atual").innerText = formatarBRL(data.valor_total_atual);
+
+    if (data.total === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="empty-state">
+            <span class="icone">🔍</span>Nenhum patrimônio encontrado.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = "";
+    data.bens.forEach(b => {
+        const local = b.nome_sala !== "Não Alocado"
+            ? `${b.nome_sala}${b.bloco_sala ? ' (' + b.bloco_sala + ')' : ''}` : "Não Alocado";
+        const badgeBaixado = b.foi_baixado ? '<span class="badge-baixado">BAIXADO</span>' : '';
+
+        let thumbHtml = "";
+        if (b.primeira_foto) {
+            thumbHtml = `
+                <div class="thumb-wrapper">
+                    <img src="${b.primeira_foto}" class="tabela-thumb"
+                         onclick="event.stopPropagation(); abrirLightbox('${b.primeira_foto}')"
+                         alt="${b.nome}">
+                    ${b.total_fotos > 1 ? `<span class="thumb-badge">${b.total_fotos}</span>` : ''}
+                </div>
+            `;
+        } else {
+            thumbHtml = `<div class="tabela-thumb-placeholder"
+                onclick="event.stopPropagation(); abrirDetalhes(${b.id_patrimonio})"
+                title="Clique para adicionar foto">sem<br>foto</div>`;
+        }
+
+        let tagsHtml = "";
+        if (b.codigo_nacional) tagsHtml += `<span class="tag-info">🏷️ ${b.codigo_nacional}</span>`;
+        if (b.responsavel)      tagsHtml += `<span class="tag-info responsavel">👤 ${b.responsavel}</span>`;
+        if (!tagsHtml) tagsHtml = '<span style="color: var(--text-light); font-size: 0.75rem;">—</span>';
+
+        const acoesHtml = isAdmin ? `
+    <td>
+        <button class="btn-mini detalhes" onclick="abrirDetalhes(${b.id_patrimonio})" title="Detalhes">👁</button>
+        <button class="btn-mini transferir" onclick="transferirItem(${b.id_patrimonio})" title="Transferir">🔄</button>
+        <button class="btn-mini" onclick="excluirPatrimonio(${b.id_patrimonio}, '${b.nome.replace(/'/g, "\\'")}', '${b.numero_patrimonio}')"
+                title="Excluir" style="background: #fee2e2; color: #991b1b;">🗑</button>
+    </td>` : ``;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${thumbHtml}</td>
+            <td><strong>${b.numero_patrimonio}</strong>${badgeBaixado}</td>
+            <td>${b.nome}</td>
+            <td style="max-width: 200px;">${tagsHtml}</td>
+            <td>${b.nome_categoria}</td>
+            <td>${local}</td>
+            <td>${b.data_aquisicao_formatada || '-'}</td>
+            <td>${formatarBRL(b.valor_compra)}</td>
+            <td style="color: #2e7d32; font-weight: 600;">${formatarBRL(b.valor_atual)}</td>
+            <td><span class="status ativo">${b.nome_status}</span></td>
+            ${acoesHtml}
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function abrirDetalhes(id) {
+    idDetalheAtual = id;
+    document.getElementById("detalhes-nome").innerText = "Carregando...";
+    document.getElementById("detalhes-numero").innerText = "";
+    document.getElementById("detalhes-body").innerHTML = "<em>Carregando...</em>";
+    document.getElementById("modal-detalhes").classList.add("show");
+
+    try {
+        const res = await fetch(`/api/patrimonio/${id}/detalhes`);
+        const b = await res.json();
+
+        if (!res.ok) {
+            document.getElementById("detalhes-body").innerHTML = `<p style="color:red;">${b.erro}</p>`;
+            return;
+        }
+
+        document.getElementById("detalhes-nome").innerText = b.nome;
+        document.getElementById("detalhes-numero").innerText = `Nº ${b.numero_patrimonio} · ${b.nome_categoria} · ${b.nome_status}`;
+
+        const local = b.nome_sala !== "Não Alocado"
+            ? `${b.nome_sala}${b.bloco_sala ? ' (' + b.bloco_sala + ')' : ''}` : "Não Alocado";
+
+        let html = `
+            <div class="detalhe-secao">
+                <h4>📋 Informações Gerais</h4>
+                <div class="detalhe-grid">
+                    <div class="detalhe-item">
+                        <label>Nº Patrimônio</label>
+                        <div class="valor">${b.numero_patrimonio}</div>
+                    </div>
+                    <div class="detalhe-item">
+                        <label>Categoria (CGE 195/2016)</label>
+                        <div class="valor">${b.nome_categoria}</div>
+                    </div>
+                    <div class="detalhe-item">
+                        <label>Sala / Bloco</label>
+                        <div class="valor">${local}</div>
+                    </div>
+                    <div class="detalhe-item">
+                        <label>Nota Fiscal</label>
+                        <div class="valor">${b.nota_fiscal || '—'}</div>
+                    </div>
+                    <div class="detalhe-item">
+                        <label>Data de Aquisição</label>
+                        <div class="valor">${b.data_formatada || '—'}</div>
+                    </div>
+                    <div class="detalhe-item">
+                        <label>Taxa de Depreciação</label>
+                        <div class="valor">${b.taxa_depreciacao}% a.a.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detalhe-secao">
+                <h4>💰 Valores</h4>
+                <div class="detalhe-grid">
+                    <div class="detalhe-item">
+                        <label>Valor de Compra</label>
+                        <div class="valor">${formatarBRL(b.valor_atual)}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detalhe-secao">
+                <h4>🏷️ Código Nacional e Responsável ${isAdmin ? '<button onclick="toggleEditarExtra()" style="margin-left:auto; background:#f3f4f6; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.78rem; font-family:Poppins;">✏ Editar</button>' : ''}</h4>
+                <div id="extra-display">
+                    <div class="detalhe-grid">
+                        <div class="detalhe-item">
+                            <label>Código Nacional</label>
+                            <div class="valor">${b.codigo_nacional || '—'}</div>
+                        </div>
+                        <div class="detalhe-item">
+                            <label>Responsável</label>
+                            <div class="valor">${b.responsavel || '—'}</div>
+                        </div>
+                        <div class="detalhe-item">
+                            <label>Contato</label>
+                            <div class="valor">${b.contato_responsavel || '—'}</div>
+                        </div>
+                    </div>
+                </div>
+                ${isAdmin ? `
+                <div id="extra-form" style="display:none; margin-top:12px;">
+                    <div style="display:grid; gap:10px;">
+                        <div class="form-group">
+                            <label>Código Nacional</label>
+                            <input type="text" id="extra-codigo" value="${b.codigo_nacional || ''}" maxlength="100" placeholder="Ex: INEP-12345"
+                                style="width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-family:Poppins;">
+                        </div>
+                        <div class="form-group">
+                            <label>Responsável</label>
+                            <input type="text" id="extra-responsavel" value="${b.responsavel || ''}" maxlength="150" placeholder="Ex: João Silva"
+                                style="width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-family:Poppins;">
+                        </div>
+                        <div class="form-group">
+                            <label>Contato (e-mail ou telefone)</label>
+                            <input type="text" id="extra-contato" value="${b.contato_responsavel || ''}" maxlength="150" placeholder="Ex: joao@ipe.edu.br"
+                                style="width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-family:Poppins;">
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="salvarExtra()" class="btn-register" style="flex:1; padding:10px;">Salvar</button>
+                            <button onclick="toggleEditarExtra()" class="btn-cancel" style="padding:10px 20px;">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+
+        html += `<div class="detalhe-secao">
+            <h4>📷 Fotos do Equipamento (${b.fotos.length})</h4>`;
+
+        if (isAdmin) {
+            html += `
+                <div class="upload-fotos" id="upload-area"
+                     onclick="document.getElementById('input-foto').click()"
+                     ondragover="event.preventDefault(); this.classList.add('dragover')"
+                     ondragleave="this.classList.remove('dragover')"
+                     ondrop="handleDrop(event)">
+                    <span class="icone">📷</span>
+                    <p>Clique ou arraste uma foto aqui</p>
+                    <small>JPG, PNG, GIF ou WEBP · máx. 5MB</small>
+                    <input type="file" id="input-foto" accept="image/*" style="display:none" onchange="uploadFoto(this.files[0])">
+                </div>
+            `;
+        }
+
+        if (b.fotos.length === 0) {
+            html += `<p style="color: var(--text-light); font-size: 0.9rem; text-align: center; padding: 20px;">
+                📭 Nenhuma foto cadastrada ainda.
+            </p>`;
+        } else {
+            html += '<div class="galeria-fotos">';
+            b.fotos.forEach(f => {
+                html += `
+                    <div class="foto-card" onclick="abrirLightbox('${f.caminho}')">
+                        <img src="${f.caminho}" alt="Foto" loading="lazy">
+                        <div class="foto-info">
+                            ${f.data_upload}<br>
+                            <small>${f.tamanho_kb} KB</small>
+                        </div>
+                        ${isAdmin ? `<button class="btn-remover-foto"
+                            onclick="event.stopPropagation(); excluirFoto('${f.id}')"
+                            title="Remover">✕</button>` : ''}
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+
+        html += '</div>';
+
+        document.getElementById("detalhes-body").innerHTML = html;
+
+    } catch (err) {
+        document.getElementById("detalhes-body").innerHTML = `<p style="color:red;">Erro: ${err.message}</p>`;
+    }
+}
+
+function fecharDetalhes() {
+    document.getElementById("modal-detalhes").classList.remove("show");
+    idDetalheAtual = null;
+}
+
+function toggleEditarExtra() {
+    const display = document.getElementById("extra-display");
+    const form = document.getElementById("extra-form");
+    if (display.style.display === "none") {
+        display.style.display = "block";
+        form.style.display = "none";
+    } else {
+        display.style.display = "none";
+        form.style.display = "block";
+    }
+}
+
+async function salvarExtra() {
+    if (!idDetalheAtual) return;
+
+    const formData = new FormData();
+    formData.append("codigo_nacional", document.getElementById("extra-codigo").value);
+    formData.append("responsavel", document.getElementById("extra-responsavel").value);
+    formData.append("contato", document.getElementById("extra-contato").value);
+
+    try {
+        const res = await fetch(`/api/patrimonio/${idDetalheAtual}/extra`, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (res.ok) {
+            toast(data.mensagem, "sucesso");
+            abrirDetalhes(idDetalheAtual);
+            buscar();
+        } else {
+            toast(data.erro || "Erro ao salvar.", "erro");
+        }
+    } catch (err) {
+        toast("Erro: " + err.message, "erro");
+    }
+}
+
+async function uploadFoto(file) {
+    if (!file || !idDetalheAtual) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        toast("Arquivo muito grande. Máximo: 5MB.", "aviso");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("foto", file);
+
+    try {
+        const res = await fetch(`/api/patrimonio/${idDetalheAtual}/foto`, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (res.ok) {
+            abrirDetalhes(idDetalheAtual);
+            buscar();
+        } else {
+            toast(data.erro || "Erro ao enviar foto.", "erro");
+        }
+    } catch (err) {
+        toast("Erro: " + err.message, "erro");
+    }
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    document.getElementById("upload-area").classList.remove("dragover");
+    const file = event.dataTransfer.files[0];
+    if (file) uploadFoto(file);
+}
+
+async function excluirFoto(fotoId) {
+    const ok = await confirmarAcao("Excluir esta foto?", {
+        titulo: "Excluir foto", textoConfirmar: "Excluir", perigo: true
+    });
+    if (!ok) return;
+    if (!idDetalheAtual) return;
+
+    try {
+        const res = await fetch(`/api/patrimonio/${idDetalheAtual}/foto/${fotoId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (res.ok) {
+            abrirDetalhes(idDetalheAtual);
+            buscar();
+        } else {
+            toast(data.erro || "Erro ao excluir.", "erro");
+        }
+    } catch (err) {
+        toast("Erro: " + err.message, "erro");
+    }
+}
+
+function abrirLightbox(caminho) {
+    document.getElementById("lightbox-img").src = "/" + caminho.replace(/^\//, "");
+    document.getElementById("lightbox").classList.add("show");
+}
+
+function fecharLightbox() {
+    document.getElementById("lightbox").classList.remove("show");
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        fecharLightbox();
+        fecharDetalhes();
+    }
+});
+
+function ordenarPor(campo) {
+    if (ordemAtual.campo === campo) {
+        ordemAtual.direcao = ordemAtual.direcao === "asc" ? "desc" : "asc";
+    } else {
+        ordemAtual.campo = campo;
+        ordemAtual.direcao = "asc";
+    }
+    document.querySelectorAll("th.sortable").forEach(th => {
+        th.classList.remove("asc", "desc");
+        if (th.dataset.campo === campo) th.classList.add(ordemAtual.direcao);
+    });
+    buscar();
+}
+
+function atualizarChips() {
+    const container = document.getElementById("chips-ativos");
+    const contador = document.getElementById("filtro-contador-chips");
+    const chips = [];
+
+    const busca = document.getElementById("f-busca").value.trim();
+    if (busca) chips.push({ tipo: "busca", texto: `Busca: "${busca}"` });
+
+    const cat = document.getElementById("f-categoria");
+    if (cat.value) chips.push({ tipo: "categoria", texto: `📂 ${cat.options[cat.selectedIndex].textContent}` });
+
+    const sala = document.getElementById("f-sala");
+    if (sala.value) chips.push({ tipo: "sala", texto: `🏢 ${sala.options[sala.selectedIndex].textContent}` });
+
+    const status = document.getElementById("f-status");
+    if (status.value) chips.push({ tipo: "status", texto: `🏷️ ${status.options[status.selectedIndex].textContent}` });
+
+    const vmin = document.getElementById("f-valor-min").value;
+    if (vmin) chips.push({ tipo: "valor-min", texto: `💰 ≥ R$ ${vmin}` });
+
+    const vmax = document.getElementById("f-valor-max").value;
+    if (vmax) chips.push({ tipo: "valor-max", texto: `💰 ≤ R$ ${vmax}` });
+
+    const dini = document.getElementById("f-data-ini").value;
+    if (dini) chips.push({ tipo: "data-ini", texto: `📅 Desde ${dini}` });
+
+    const dfim = document.getElementById("f-data-fim").value;
+    if (dfim) chips.push({ tipo: "data-fim", texto: `📅 Até ${dfim}` });
+
+    if (document.getElementById("f-incluir-baixados").value === "1") {
+        chips.push({ tipo: "incluir-baixados", texto: "👁 Incluir baixados" });
+    }
+
+    if (chips.length === 0) {
+        container.innerHTML = "";
+        contador.style.display = "none";
+        return;
+    }
+
+    contador.style.display = "inline-block";
+    contador.innerText = chips.length;
+
+    container.innerHTML = chips.map(c => `
+        <div class="chip">
+            ${c.texto}
+            <button class="remover" onclick="removerFiltro('${c.tipo}')" title="Remover">✖</button>
+        </div>
+    `).join("");
+}
+
+function removerFiltro(tipo) {
+    const map = {
+        "busca": "f-busca", "categoria": "f-categoria", "sala": "f-sala",
+        "status": "f-status", "valor-min": "f-valor-min", "valor-max": "f-valor-max",
+        "data-ini": "f-data-ini", "data-fim": "f-data-fim", "incluir-baixados": "f-incluir-baixados"
+    };
+    const el = document.getElementById(map[tipo]);
+    if (el) {
+        if (el.tagName === "SELECT" && tipo === "incluir-baixados") el.value = "0";
+        else el.value = "";
+    }
+    buscar();
+}
+
+function atualizarBotaoLimpar() {
+    const btn = document.getElementById("btn-limpar");
+    const temFiltro = [
+        "f-busca", "f-categoria", "f-sala", "f-status",
+        "f-valor-min", "f-valor-max", "f-data-ini", "f-data-fim"
+    ].some(id => document.getElementById(id).value) ||
+        document.getElementById("f-incluir-baixados").value !== "0";
+    btn.style.display = temFiltro ? "inline-block" : "none";
+}
+
+function limparFiltros() {
+    ["f-busca", "f-categoria", "f-sala", "f-status", "f-valor-min",
+     "f-valor-max", "f-data-ini", "f-data-fim"].forEach(id => document.getElementById(id).value = "");
+    document.getElementById("f-incluir-baixados").value = "0";
+    ordemAtual = { campo: "numero", direcao: "desc" };
+    document.querySelectorAll("th.sortable").forEach(th => th.classList.remove("asc", "desc"));
+    buscar();
+}
+
+function restaurarFiltrosDaURL() {
+    const params = new URLSearchParams(window.location.search);
+    const campos = ["busca", "categoria", "sala", "status", "valor_min", "valor_max", "data_ini", "data_fim"];
+    const map = {
+        "busca": "f-busca", "categoria": "f-categoria", "sala": "f-sala",
+        "status": "f-status", "valor_min": "f-valor-min", "valor_max": "f-valor-max",
+        "data_ini": "f-data-ini", "data_fim": "f-data-fim"
+    };
+    campos.forEach(c => {
+        if (params.has(c)) document.getElementById(map[c]).value = params.get(c);
+    });
+    if (params.get("incluir_baixados") === "1") document.getElementById("f-incluir-baixados").value = "1";
+    if (params.has("ordem")) ordemAtual.campo = params.get("ordem");
+    if (params.has("direcao")) ordemAtual.direcao = params.get("direcao");
+
+    if (params.has("valor_min") || params.has("valor_max") || params.has("data_ini") || params.has("data_fim")) {
+        document.getElementById("filtros-avancados").classList.add("show");
+        document.getElementById("btn-toggle-avancado").innerHTML = "⚙️ Menos filtros";
+    }
+}
+
+function toggleFiltrosAvancados() {
+    const div = document.getElementById("filtros-avancados");
+    const btn = document.getElementById("btn-toggle-avancado");
+    div.classList.toggle("show");
+    btn.innerHTML = div.classList.contains("show") ? "⚙️ Menos filtros" : "⚙️ Mais filtros";
+}
+
+async function carregarSalas() {
+    try {
+        const res = await fetch("/api/salas");
+        const salas = await res.json();
+        const select = document.getElementById("select-salas");
+        select.innerHTML = '<option value="">Selecione uma Sala...</option>';
+        salas.forEach(s => {
+            select.innerHTML += `<option value="${s.id_sala}">${s.nome} ${s.bloco ? '- ' + s.bloco : ''}</option>`;
+        });
+    } catch (err) {
+        console.error("Erro ao carregar salas:", err);
+    }
+}
+
+function cadastrarSala() {
+    const formData = new FormData();
+    formData.append("nome", document.getElementById("sala-nome").value);
+    formData.append("bloco", document.getElementById("sala-bloco").value);
+
+    fetch("/api/salas", { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(data => {
+            toast(data.mensagem || data.erro, data.mensagem ? "sucesso" : "erro");
+            fecharModais();
+            carregarFiltrosDisponiveis();
+            carregarSalas();
+            buscar();
+        });
+}
+
+function transferirItem(id) {
+    window.location.href = `movimentacoes.html?patrimonio=${id}`;
+}
+
+function abrirModalPatrimonio() { document.getElementById("modal-patrimonio").classList.add("show"); }
+function abrirModalSala() { document.getElementById("modal-sala").classList.add("show"); }
+function fecharModais() {
+    document.getElementById("modal-patrimonio").classList.remove("show");
+    document.getElementById("modal-sala").classList.remove("show");
+}
+
+// ============================================================================
+// IMPORTAÇÃO EM LOTE (CSV)
+// ============================================================================
+
+let dadosImportAtual = null;
+let csvFileAtual = null;
+
+function abrirModalImportar() {
+    document.getElementById("modal-importar").classList.add("show");
+    irParaEtapaImport(1);
+    dadosImportAtual = null;
+    csvFileAtual = null;
+    document.getElementById("input-csv").value = "";
+}
+
+function fecharModalImportar() {
+    document.getElementById("modal-importar").classList.remove("show");
+    dadosImportAtual = null;
+    csvFileAtual = null;
+}
+
+function irParaEtapaImport(n) {
+    document.querySelectorAll(".import-etapa").forEach(e => e.classList.remove("ativa"));
+    document.getElementById(`import-etapa-${n}`).classList.add("ativa");
+
+    const btnVoltar = document.getElementById("btn-voltar-import");
+    const btnConfirmar = document.getElementById("btn-confirmar-import");
+    const btnConcluir = document.getElementById("btn-concluir-import");
+
+    btnVoltar.style.display = n === 2 ? "inline-block" : "none";
+    btnConfirmar.style.display = n === 2 ? "inline-block" : "none";
+    btnConcluir.style.display = n === 3 ? "inline-block" : "none";
+}
+
+function voltarEtapaImport() {
+    irParaEtapaImport(1);
+}
+
+async function uploadCSV(file) {
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+        toast("Por favor, selecione um arquivo .csv", "aviso");
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        toast("Arquivo muito grande. Máximo: 5MB.", "aviso");
+        return;
+    }
+
+    csvFileAtual = file;
+
+    const area = document.getElementById("upload-csv-area");
+    const htmlOriginal = area.innerHTML;
+    area.innerHTML = `
+        <span class="icone">⏳</span>
+        <p>Validando arquivo...</p>
+        <small>Aguarde enquanto o sistema analisa as linhas</small>
+    `;
+
+    const formData = new FormData();
+    formData.append("arquivo", file);
+
+    try {
+        const res = await fetch("/api/inventario/importar-validar", {
+            method: "POST",
+            body: formData
+        });
+        const data = await res.json();
+
+        area.innerHTML = htmlOriginal;
+
+        if (!res.ok) {
+            toast(data.erro || "Erro ao validar arquivo.", "erro");
+            return;
+        }
+
+        dadosImportAtual = data;
+        renderizarPreviewImport(data);
+        irParaEtapaImport(2);
+
+    } catch (err) {
+        area.innerHTML = htmlOriginal;
+        toast("Erro de conexão: " + err.message, "erro");
+    }
+}
+
+function handleDropCSV(event) {
+    event.preventDefault();
+    document.getElementById("upload-csv-area").classList.remove("dragover");
+    const file = event.dataTransfer.files[0];
+    if (file) uploadCSV(file);
+}
+
+function renderizarPreviewImport(data) {
+    const resumo = document.getElementById("import-resumo-container");
+    resumo.innerHTML = `
+        <div class="import-resumo">
+            <div class="import-resumo-card ok">
+                <small>Linhas OK</small>
+                <strong>${data.linhas_ok}</strong>
+            </div>
+            <div class="import-resumo-card aviso">
+                <small>Com Aviso</small>
+                <strong>${data.linhas_com_aviso}</strong>
+            </div>
+            <div class="import-resumo-card erro">
+                <small>Com Erro</small>
+                <strong>${data.linhas_com_erro}</strong>
+            </div>
+            <div class="import-resumo-card">
+                <small>Total</small>
+                <strong>${data.total_linhas}</strong>
+            </div>
+        </div>
+    `;
+
+    const preview = document.getElementById("import-preview-container");
+
+    let avisoHtml = "";
+    if (data.linhas_com_erro > 0) {
+        avisoHtml = `
+            <div class="instrucoes-import" style="background: #fef2f2; border-color: #991b1b; color: #7f1d1d;">
+                <strong>⚠️ Atenção:</strong> ${data.linhas_com_erro} linha(s) com erro serão <strong>ignoradas</strong>.
+                Corrija o CSV e reenvie para importar todas.
+            </div>
+        `;
+    }
+
+    let tabelaHtml = `
+        <div class="import-preview-tabela">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Linha</th>
+                        <th>Status</th>
+                        <th>Nº</th>
+                        <th>Nome</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                        <th>Sala</th>
+                        <th>Mensagem</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    data.linhas.forEach(l => {
+        const d = l.dados || {};
+        const msgs = [...(l.erros || []), ...(l.avisos || [])].join(" · ") || "—";
+        const classe = l.status === "erro" ? "linha-erro" :
+                       l.status === "aviso" ? "linha-aviso" : "linha-ok";
+
+        tabelaHtml += `
+            <tr class="${classe}">
+                <td>${l.linha}</td>
+                <td><span class="badge-status-import ${l.status}">${l.status}</span></td>
+                <td>${d.numero_patrimonio || '—'}</td>
+                <td>${d.nome || '—'}</td>
+                <td>${d.valor_compra ? 'R$ ' + d.valor_compra.toFixed(2) : '—'}</td>
+                <td>${d.data_aquisicao || '—'}</td>
+                <td>${d.sala_nome || '—'}</td>
+                <td class="mensagem-linha">${msgs}</td>
+            </tr>
+        `;
+    });
+
+    tabelaHtml += `</tbody></table></div>`;
+
+    preview.innerHTML = avisoHtml + tabelaHtml;
+
+    const btnConfirmar = document.getElementById("btn-confirmar-import");
+    if (data.linhas_com_erro > 0 && data.linhas_ok + data.linhas_com_aviso === 0) {
+        btnConfirmar.disabled = true;
+        btnConfirmar.style.opacity = "0.5";
+    } else {
+        btnConfirmar.disabled = false;
+        btnConfirmar.style.opacity = "1";
+    }
+}
+
+async function confirmarImportacao() {
+    if (!dadosImportAtual) return;
+
+    const btn = document.getElementById("btn-confirmar-import");
+
+    await comSpinner(btn, async () => {
+        try {
+            const res = await fetch("/api/inventario/importar-confirmar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ linhas: dadosImportAtual.linhas })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                renderizarResultadoImport(data);
+                irParaEtapaImport(3);
+            } else {
+                toast(data.erro || "Erro ao importar.", "erro");
+            }
+        } catch (err) {
+            toast("Erro de conexão: " + err.message, "erro");
+        }
+    });
+}
+
+function renderizarResultadoImport(data) {
+    const container = document.getElementById("resultado-import-container");
+    const temErros = (data.erros || []).length > 0;
+
+    container.innerHTML = `
+        <span class="icone-grande">${temErros ? '⚠️' : '🎉'}</span>
+        <h3>${temErros ? 'Importação concluída com avisos' : 'Importação concluída!'}</h3>
+        <p>${data.mensagem || ''}</p>
+
+        <div class="resultado-stats">
+            <div class="stat criado">
+                <strong>${data.inseridos}</strong>
+                <small>Criados</small>
+            </div>
+            <div class="stat atualizado">
+                <strong>${data.atualizados}</strong>
+                <small>Atualizados</small>
+            </div>
+            ${temErros ? `
+                <div class="stat erro">
+                    <strong>${data.erros.length}</strong>
+                    <small>Erros</small>
+                </div>
+            ` : ''}
+        </div>
+
+        ${temErros ? `
+            <div style="text-align: left; background: #fef2f2; border-left: 4px solid #991b1b;
+                        padding: 15px 20px; border-radius: 10px; margin-top: 20px;">
+                <strong style="color: #7f1d1d;">Erros de gravação:</strong>
+                <ul style="margin: 8px 0 0 20px; color: #7f1d1d; font-size: 0.85rem;">
+                    ${data.erros.map(e => `<li>Linha ${e.linha} (Nº ${e.numero}): ${e.mensagem}</li>`).join("")}
+                </ul>
+            </div>
+        ` : ''}
+    `;
+}
+
+async function tentarAbrirModalPatrimonio() {
+    await protegerAcao("admin", () => {
+        document.getElementById("modal-patrimonio").classList.add("show");
+        popularSelectCategoriasModal();
+    });
+}
+
+async function tentarAbrirModalSala() {
+    await protegerAcao("admin", () => {
+        document.getElementById("modal-sala").classList.add("show");
+    });
+}
+
+async function tentarAbrirModalImportar() {
+    await protegerAcao("admin", () => {
+        if (typeof abrirModalImportar === "function") abrirModalImportar();
+    });
+}
+
+async function excluirPatrimonio(id, nome, numero) {
+    if (!isAdmin) {
+        toast("Apenas administradores podem excluir patrimônios.", "aviso");
+        return;
+    }
+
+    const ok1 = await confirmarAcao(
+        `Excluir o patrimônio <strong>"${nome}"</strong> (Nº ${numero})?\n\n` +
+        `⚠️ Esta ação é <strong>IRREVERSÍVEL</strong> e não pode ser desfeita.`,
+        {
+            titulo: "Excluir patrimônio",
+            textoConfirmar: "Continuar",
+            textoCancelar: "Cancelar",
+            perigo: true
+        }
+    );
+    if (!ok1) return;
+
+    const ok2 = await confirmarAcao(
+        `⚠️ <strong>ÚLTIMA CHANCE</strong> ⚠️\n\n` +
+        `Confirma a exclusão <strong>definitiva</strong> do patrimônio?\n\n` +
+        `<strong>${nome}</strong> (Nº ${numero})\n\n` +
+        `Se quiser apenas "desativar" o item, use o módulo <strong>Baixa</strong> em vez disso.`,
+        {
+            titulo: "Confirmação final",
+            textoConfirmar: "Sim, excluir definitivamente",
+            textoCancelar: "Não, cancelar",
+            perigo: true
+        }
+    );
+    if (!ok2) return;
+
+    try {
+        const res = await fetch(`/api/patrimonio/${id}`, { method: "DELETE" });
+        const data = await res.json();
+
+        if (res.ok) {
+            toast(data.mensagem || "Patrimônio excluído!", "sucesso");
+            buscar();
+        } else {
+            toast(data.erro || "Erro ao excluir.", "erro");
+        }
+    } catch (err) {
+        toast("Erro de conexão: " + err.message, "erro");
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const u = await obterPerfilAtual();
+    if (u && u.id_perfil !== 1) {
+        exibirAvisoRestricao("#aviso-restricao-inventario",
+            "Você pode <strong>consultar</strong> o inventário livremente. " +
+            "As ações de <strong>cadastrar, editar, importar e dar baixa</strong> são exclusivas de administradores.",
+            { link: "perfil.html", linkTexto: "Ver meu perfil" }
+        );
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const formPatr = document.getElementById("form-novo-patrimonio");
+    if (!formPatr) return;
+
+    formPatr.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const btnSalvar = document.getElementById("btn-salvar-patrimonio");
+        const formData = new FormData(formPatr);
+        formData.append("_ajax", "1");
+
+        await comSpinner(btnSalvar, async () => {
+            try {
+                const res = await fetch("/api/inventario/cadastrar", {
+                    method: "POST",
+                    body: formData,
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+
+                if (res.redirected) {
+                    toast("Operação concluída. Verifique a lista.", "info");
+                    fecharModais();
+                    formPatr.reset();
+                    buscar();
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && data.sucesso !== false && !data.erro) {
+                    toast(data.mensagem || "Patrimônio cadastrado com sucesso!", "sucesso");
+                    fecharModais();
+                    formPatr.reset();
+                    buscar();
+                } else {
+                    toast(data.erro || "Erro ao salvar patrimônio.", "erro", 6000);
+                }
+            } catch (err) {
+                toast("Erro de conexão: " + err.message, "erro");
+            }
+        });
+    });
+});
+
+// ============================================================================
+// EXPORTAR PDF DO INVENTÁRIO
+// ============================================================================
+
+function exportarInventarioPDF() {
+    // Reaproveita os mesmos filtros da tela
+    const params = new URLSearchParams();
+    const busca = document.getElementById("f-busca").value.trim();
+    const categoria = document.getElementById("f-categoria").value;
+    const sala = document.getElementById("f-sala").value;
+    const status = document.getElementById("f-status").value;
+    const valorMin = document.getElementById("f-valor-min").value;
+    const valorMax = document.getElementById("f-valor-max").value;
+    const dataIni = document.getElementById("f-data-ini").value;
+    const dataFim = document.getElementById("f-data-fim").value;
+    const incluirBaixados = document.getElementById("f-incluir-baixados").value;
+
+    if (busca) params.append("busca", busca);
+    if (categoria) params.append("categoria", categoria);
+    if (sala) params.append("sala", sala);
+    if (status) params.append("status", status);
+    if (valorMin) params.append("valor_min", valorMin);
+    if (valorMax) params.append("valor_max", valorMax);
+    if (dataIni) params.append("data_ini", dataIni);
+    if (dataFim) params.append("data_fim", dataFim);
+    if (incluirBaixados === "1") params.append("incluir_baixados", "1");
+    params.append("ordem", ordemAtual.campo);
+    params.append("direcao", ordemAtual.direcao);
+
+    const url = "/api/inventario/pdf?" + params.toString();
+
+    // Feedback visual
+    const btn = document.getElementById("btn-exportar-pdf");
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Gerando PDF...";
+
+    // Abre o download em nova aba/janela (o navegador baixa automaticamente)
+    const a = document.createElement("a");
+    a.href = url;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Restaura o botão após 2s (o download é assíncrono)
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+        toast("PDF gerado! Verifique seus downloads.", "sucesso");
+    }, 2000);
+}
+
+window.exportarInventarioPDF = exportarInventarioPDF;

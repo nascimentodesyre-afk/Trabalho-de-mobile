@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico - IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html" >Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html"class="active">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Histórico do Sistema</h1>
+                    <p>Log de auditoria de todas as alterações registradas nos chamados</p>
+                </div>
+
+                <div class="top-buttons">
+                    <a href="chamados.html" class="btn-register">← Voltar para Chamados</a>
+                </div>
+            </header>
+
+            <!-- ---------- RESUMO (reaproveita .cards/.card) ---------- -->
+            <section class="cards" style="margin-bottom: 35px;">
+                <div class="card">
+                    <h3>Total de Eventos</h3>
+                    <p id="resumo-total">–</p>
+                </div>
+                <div class="card">
+                    <h3>Eventos Hoje</h3>
+                    <p id="resumo-hoje">–</p>
+                </div>
+                <div class="card">
+                    <h3>Chamados com Atividade</h3>
+                    <p id="resumo-chamados">–</p>
+                </div>
+            </section>
+
+            <section class="inventory-section">
+                <div class="section-title">
+                    <h2>Linha do Tempo de Alterações</h2>
+                </div>
+
+                <!-- ---------- FILTROS (reaproveita .form-ipe/.form-group) ---------- -->
+                <form class="form-ipe" style="flex-direction: row; flex-wrap: wrap; align-items: flex-end; margin-top: 0; margin-bottom: 20px;" onsubmit="return false;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label for="filtro-busca">Buscar</label>
+                        <input type="text" id="filtro-busca" placeholder="Descrição, chamado ou solicitante..." oninput="aplicarFiltros()">
+                    </div>
+
+                    <div class="form-group" style="min-width: 140px;">
+                        <label for="filtro-chamado">Nº do Chamado</label>
+                        <input type="number" id="filtro-chamado" placeholder="Ex: 12" min="1" oninput="aplicarFiltros()">
+                    </div>
+
+                    <div class="form-group" style="min-width: auto;">
+                        <button type="button" onclick="limparFiltros()" style="padding: 10px 16px; cursor: pointer; border-radius: 12px; border: 1px solid #d1d5db; background: #fafafa;">Limpar</button>
+                    </div>
+                </form>
+
+                <p id="filtro-contador" style="color: var(--text-light); font-size: 0.85rem; margin-bottom: 12px;"></p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Chamado</th>
+                            <th>Solicitante</th>
+                            <th>Prioridade</th>
+                            <th>Evento</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="tabela-historico">
+                        <tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+    <script src="avisos.js"></script>
+    <script src="historico.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>

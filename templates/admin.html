@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel ADM - IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn {
+            padding: 10px 20px; border-radius: 12px; border: 1px solid #d1d5db;
+            background: #fafafa; cursor: pointer; font-family: 'Poppins', sans-serif;
+            font-weight: 500; transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-color: var(--primary-dark); color: var(--dark);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .log-item {
+            padding: 10px 14px; border-bottom: 1px solid var(--border);
+            display: flex; gap: 12px; align-items: flex-start;
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-badge {
+            padding: 3px 10px; border-radius: 999px; font-size: 0.7rem;
+            font-weight: 600; white-space: nowrap;
+        }
+        .log-badge.INSERT { background: #dcfce7; color: #15803d; }
+        .log-badge.UPDATE { background: #fef3c7; color: #b45309; }
+        .log-badge.DELETE { background: #fee2e2; color: #991b1b; }
+        .btn-mini {
+            padding: 5px 12px; font-size: 0.8rem; border-radius: 8px;
+            border: none; cursor: pointer; font-family: 'Poppins', sans-serif;
+            font-weight: 500; transition: 0.2s;
+        }
+        .btn-mini.danger { background: #fee2e2; color: #991b1b; }
+        .btn-mini.danger:hover { background: #fecaca; }
+        .btn-mini.primary { background: #dbeafe; color: #1e40af; }
+        .btn-mini.primary:hover { background: #bfdbfe; }
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white; padding: 20px; border-radius: 16px;
+            box-shadow: var(--shadow); border-left: 5px solid var(--primary-dark);
+        }
+        .stat-card h4 { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+        .stat-card p { font-size: 1.8rem; font-weight: 700; color: var(--dark); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html">Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html" class="active">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Painel do Administrador</h1>
+                    <p>Gerencie usuários, alertas e visualize estatísticas do sistema</p>
+                </div>
+                <div class="top-buttons">
+                    <a href="/logout" class="btn-login">Sair</a>
+                </div>
+            </header>
+
+            <section class="stats-grid" id="stats-grid">
+                <div class="stat-card"><h4>Total de Patrimônios</h4><p id="stat-total-patrimonios">–</p></div>
+                <div class="stat-card"><h4>Valor Total do Patrimônio</h4><p id="stat-valor-total">–</p></div>
+                <div class="stat-card"><h4>Usuários Cadastrados</h4><p id="stat-total-usuarios">–</p></div>
+                <div class="stat-card"><h4>Chamados Concluídos (mês)</h4><p id="stat-chamados-mes">–</p></div>
+            </section>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="abrirTab('usuarios', this)">👥 Usuários</button>
+                <button class="tab-btn" onclick="abrirTab('alertas', this)">🔔 Alertas</button>
+                <button class="tab-btn" onclick="abrirTab('logs', this)">📋 Log de Auditoria</button>
+            </div>
+
+            <section class="inventory-section tab-content active" id="tab-usuarios">
+                <div class="section-title"><h2>Gerenciamento de Usuários</h2></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Nome</th><th>E-mail</th>
+                            <th>Perfil</th><th>Chamados</th><th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-usuarios">
+                        <tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="inventory-section tab-content" id="tab-alertas">
+                <div class="section-title">
+                    <h2>Alertas do Sistema</h2>
+                    <p style="color: var(--text-light); font-size: 0.9rem;">Alertas ativos aparecem para todos os usuários.</p>
+                </div>
+
+                <form id="form-alerta" class="form-ipe" style="max-width: 100%; margin-bottom: 25px;">
+                    <div class="form-group">
+                        <label>Mensagem do Alerta</label>
+                        <input type="text" id="alerta-mensagem" required placeholder="Ex: Garantia do patrimônio X expira em 30 dias" maxlength="200">
+                    </div>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 180px;">
+                            <label>Data de Vencimento</label>
+                            <input type="date" id="alerta-data" required>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 180px;">
+                            <label>Tipo de Alerta</label>
+                            <select id="alerta-tipo">
+                                <option value="1">Prazo Limite (SLA)</option>
+                                <option value="2">Vencimento de Garantia</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-register" style="align-self: flex-start;">+ Criar Alerta</button>
+                </form>
+
+                <h3 style="margin-bottom: 15px; font-size: 1.1rem;">Alertas Ativos</h3>
+                <div id="lista-alertas" style="background: #fafafa; border-radius: 12px; padding: 5px;">
+                    <em style="padding: 15px; display: block;">Carregando...</em>
+                </div>
+            </section>
+
+            <section class="inventory-section tab-content" id="tab-logs">
+                <div class="section-title">
+                    <h2>Log de Auditoria</h2>
+                    <p style="color: var(--text-light); font-size: 0.9rem;">Últimas 200 ações registradas no sistema.</p>
+                </div>
+                <div id="lista-logs" style="background: #fafafa; border-radius: 12px; padding: 5px;">
+                    <em style="padding: 15px; display: block;">Carregando...</em>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="avisos.js"></script>
+    <script src="admin.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esqueci a Senha - IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS embutido para garantir que a tela não quebre */
+        :root {
+            --primary: #FFD730;
+            --primary-dark: #F29310;
+            --dark: #152937;
+            --text-light: #5b6670;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, #0f1f2a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .login-header img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 15px;
+            background: var(--dark);
+        }
+        .login-header h1 {
+            font-size: 1.8rem;
+            color: var(--dark);
+            margin: 0 0 8px 0;
+            font-weight: 700;
+        }
+        .login-header p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            background: #fafafa;
+            transition: 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: var(--primary-dark);
+            box-shadow: 0 0 0 4px rgba(242, 147, 16, 0.15);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            color: var(--dark);
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            box-shadow: 0 10px 24px rgba(242, 147, 16, 0.3);
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(242, 147, 16, 0.4);
+        }
+        .footer-link {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.88rem;
+        }
+        .footer-link a {
+            color: var(--primary-dark);
+            font-weight: 600;
+            text-decoration: none;
+            transition: 0.15s;
+        }
+        .footer-link a:hover { text-decoration: underline; }
+
+        .flash-box {
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .flash-box.erro { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+        .flash-box.sucesso { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-header">
+            <!-- Caminho relativo para carregar a imagem corretamente -->
+            <img src="img/logo.png" alt="Logo IPE">
+            <h1>Recuperar Senha</h1>
+            <p>Enviaremos um link de redefinição para seu e-mail</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for categoria, message in messages %}
+              <div class="flash-box {{ categoria if categoria in ['erro','sucesso'] else 'erro' }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="/esqueci-senha" method="POST">
+            <div class="form-group">
+                <label for="email">E-mail cadastrado</label>
+                <input type="email" id="email" name="email" required
+                       placeholder="seu@email.com" autocomplete="email">
+            </div>
+
+            <button type="submit" class="btn-submit">Enviar link de recuperação</button>
+        </form>
+
+        <div class="footer-link">
+            <a href="/login">← Voltar para o login</a>
+        </div>
+    </div>
+    <!-- O caminho do avisos.js foi ajustado para relativo -->
+    <script src="avisos.js"></script>
+</body>
+</html>
+</html>

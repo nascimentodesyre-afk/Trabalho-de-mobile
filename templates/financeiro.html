@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro | IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .fin-card {
+            background: white; padding: 22px; border-radius: 16px;
+            box-shadow: var(--shadow); border-left: 5px solid var(--primary-dark);
+            transition: 0.2s;
+        }
+        .fin-card:hover { transform: translateY(-3px); }
+        .fin-card h3 {
+            font-size: 0.85rem; color: var(--text-light);
+            margin-bottom: 8px; font-weight: 500;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .fin-card p { font-size: 1.9rem; font-weight: 700; color: var(--dark); }
+        .fin-card.entrada { border-left-color: #15803d; }
+        .fin-card.entrada p { color: #15803d; }
+        .fin-card.saida { border-left-color: #991b1b; }
+        .fin-card.saida p { color: #991b1b; }
+        .fin-card.saldo { border-left-color: #F29310; }
+        .fin-card.bloqueado { border-left-color: #6b7280; }
+        .fin-card.bloqueado p { color: #6b7280; }
+
+        .toggle-tipo {
+            display: inline-flex; background: #f3f4f6;
+            border-radius: 12px; padding: 4px; margin-bottom: 15px;
+        }
+        .toggle-tipo button {
+            padding: 10px 22px; border-radius: 9px; border: none;
+            background: transparent; cursor: pointer;
+            font-family: 'Poppins', sans-serif; font-weight: 500;
+            color: var(--text-light); transition: 0.2s;
+        }
+        .toggle-tipo button.active {
+            background: white; color: var(--dark);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .toggle-tipo button.active.receita { color: #15803d; }
+        .toggle-tipo button.active.despesa { color: #991b1b; }
+
+        .filtros-bar {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr auto;
+            gap: 12px; align-items: end;
+            background: #fafafa; padding: 18px; border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        @media (max-width: 1100px) { .filtros-bar { grid-template-columns: 1fr 1fr; } }
+        .filtros-bar .form-group { margin: 0; }
+        .filtros-bar label { font-size: 0.8rem; color: var(--text-light); }
+
+        .modal {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center;
+            align-items: center; z-index: 1000; padding: 20px;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 18px;
+            width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+        }
+        .modal-content h3 { margin-bottom: 20px; color: var(--dark); }
+        .modal-actions {
+            display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+        }
+        .btn-cancel {
+            background: #f3f4f6; color: var(--text);
+            border: none; padding: 12px 22px; border-radius: 10px;
+            cursor: pointer; font-weight: 500; font-family: 'Poppins', sans-serif;
+        }
+        .btn-cancel:hover { background: #e5e7eb; }
+
+        .badge-tipo {
+            padding: 4px 12px; border-radius: 999px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .badge-tipo.receita { background: #dcfce7; color: #15803d; }
+        .badge-tipo.despesa { background: #fee2e2; color: #991b1b; }
+
+        .btn-mini {
+            padding: 5px 10px; font-size: 0.75rem; border-radius: 6px;
+            border: none; cursor: pointer; font-family: 'Poppins', sans-serif;
+            font-weight: 500; transition: 0.15s; margin-right: 4px;
+        }
+        .btn-mini.edit { background: #dbeafe; color: #1e40af; }
+        .btn-mini.edit:hover { background: #bfdbfe; }
+        .btn-mini.del { background: #fee2e2; color: #991b1b; }
+        .btn-mini.del:hover { background: #fecaca; }
+
+        .grafico-barras {
+            display: flex; align-items: flex-end; justify-content: space-around;
+            height: 180px; padding: 20px; background: #fafafa;
+            border-radius: 12px; gap: 8px;
+        }
+        .barra-grupo {
+            display: flex; flex-direction: column; align-items: center;
+            flex: 1; gap: 6px;
+        }
+        .barras {
+            display: flex; align-items: flex-end; gap: 4px;
+            height: 130px; width: 100%;
+            justify-content: center;
+        }
+        .barra {
+            width: 18px; border-radius: 4px 4px 0 0;
+            transition: 0.3s; min-height: 2px;
+        }
+        .barra.entrada { background: #15803d; }
+        .barra.saida { background: #991b1b; }
+        .barra-label { font-size: 0.75rem; color: var(--text-light); font-weight: 500; }
+        .legenda-grafico {
+            display: flex; gap: 20px; justify-content: center;
+            margin-top: 12px; font-size: 0.8rem;
+        }
+        .legenda-grafico span { display: flex; align-items: center; gap: 6px; }
+        .legenda-cor { width: 12px; height: 12px; border-radius: 3px; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html">Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html" class="active">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Controle Financeiro</h1>
+                    <p>Gerencie receitas, despesas e verbas do patrimônio escolar</p>
+                </div>
+              <!-- ✅ DEPOIS -->
+<div class="top-buttons">
+    <button onclick="tentarNovaDespesa()" class="btn-login" id="btn-nova-despesa" style="display:none;">+ Nova Despesa</button>
+    <button onclick="tentarNovaReceita()" class="btn-register" id="btn-nova-receita" style="display:none;">+ Nova Receita</button>
+</div>
+            </header>
+
+            <div id="aviso-restricao-financeiro"></div>
+
+            <section class="cards" style="margin-bottom: 30px;">
+                <div class="fin-card entrada">
+                    <h3>💰 Total de Entradas</h3>
+                    <p id="card-entradas">R$ 0,00</p>
+                </div>
+                <div class="fin-card saida">
+                    <h3>📉 Total de Saídas</h3>
+                    <p id="card-saidas">R$ 0,00</p>
+                </div>
+                <div class="fin-card saldo">
+                    <h3>📊 Saldo Atual</h3>
+                    <p id="card-saldo">R$ 0,00</p>
+                </div>
+                <div class="fin-card bloqueado">
+                    <h3>🔒 Saldo Bloqueado</h3>
+                    <p id="card-bloqueado">R$ 0,00</p>
+                </div>
+            </section>
+
+            <section style="margin-bottom: 30px;">
+                <div class="section-title" style="margin-bottom: 15px;">
+                    <h2>Resumo por Origem da Verba</h2>
+                    <p style="color: var(--text-light); font-size: 0.9rem;">
+                        Distribuição de recursos por fonte (PDDE Federal, CITI Faetec, etc.)
+                    </p>
+                </div>
+                <div class="origens-resumo" id="origens-resumo">
+                    <em style="padding: 15px;">Carregando...</em>
+                </div>
+            </section>
+
+            <section class="inventory-section" style="margin-bottom: 30px;">
+                <div class="section-title">
+                    <h2>Entradas x Saídas (Últimos 6 meses)</h2>
+                </div>
+                <div class="grafico-barras" id="grafico-barras">
+                    <em style="align-self:center;">Carregando...</em>
+                </div>
+                <div class="legenda-grafico">
+                    <span><div class="legenda-cor" style="background:#15803d;"></div> Entradas</span>
+                    <span><div class="legenda-cor" style="background:#991b1b;"></div> Saídas</span>
+                </div>
+            </section>
+
+            <section class="inventory-section">
+                <div class="section-title">
+                    <h2>Movimentações</h2>
+                </div>
+
+                <form class="filtros-bar" onsubmit="return false;">
+                    <div class="form-group">
+                        <label>Buscar</label>
+                        <input type="text" id="filtro-busca" placeholder="Descrição ou nº documento..." oninput="carregarMovimentacoes()">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="filtro-categoria" onchange="carregarMovimentacoes()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="filtro-tipo" onchange="carregarMovimentacoes()">
+                            <option value="">Todos</option>
+                            <option value="Receita">Receita</option>
+                            <option value="Despesa">Despesa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>De</label>
+                        <input type="date" id="filtro-data-ini" onchange="carregarMovimentacoes()">
+                    </div>
+                    <div class="form-group">
+                        <label>Até</label>
+                        <input type="date" id="filtro-data-fim" onchange="carregarMovimentacoes()">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" onclick="limparFiltros()" class="btn-login">Limpar</button>
+                    </div>
+                </form>
+
+                <div class="filtro-origem" id="filtro-origem-container">
+                    <button type="button" class="filtro-origem-btn ativo" onclick="filtrarPorOrigem('', this)">Todas</button>
+                </div>
+
+                <p id="contador-movs" style="color: var(--text-light); font-size: 0.85rem; margin-bottom: 12px;"></p>
+
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Origem</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th id="th-acoes-mov">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-movimentacoes">
+                            <tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-mov" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-titulo">Nova Movimentação</h3>
+            <form id="form-mov" class="form-ipe" style="max-width:100%;">
+                <input type="hidden" id="mov-id">
+                <input type="hidden" id="mov-tipo">
+
+                <div class="form-group">
+                    <label><strong>Tipo:</strong></label>
+                    <div class="toggle-tipo" style="margin:0;">
+                        <button type="button" id="btn-tipo-receita" onclick="setTipo('Receita')">💰 Receita</button>
+                        <button type="button" id="btn-tipo-despesa" onclick="setTipo('Despesa')">📉 Despesa</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><strong>Origem da Verba:</strong></label>
+                    <div class="origem-selector" id="origem-selector"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <input type="text" id="mov-descricao" required placeholder="Ex: Compra de projetor" maxlength="200">
+                </div>
+
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label>Valor (R$)</label>
+                        <input type="number" step="0.01" min="0.01" id="mov-valor" required placeholder="0.00">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label>Forma de Pagamento</label>
+                        <select id="mov-forma">
+                            <option value="Pix">Pix</option>
+                            <option value="Transferencia">Transferência</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartao">Cartão</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label>Categoria</label>
+                        <input type="text" id="mov-categoria" list="lista-categorias" placeholder="Ex: Equipamentos">
+                        <datalist id="lista-categorias"></datalist>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label>Nº Documento / NF</label>
+                        <input type="text" id="mov-doc" placeholder="Ex: NF-12345">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Vincular a uma Verba (opcional)</label>
+                    <select id="mov-verba">
+                        <option value="">— Nenhuma —</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="grupo-aprovacao">
+                    <label>
+                        <input type="checkbox" id="mov-aprovado" checked>
+                        Despesa já aprovada
+                    </label>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn-register" id="btn-salvar-mov">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-confirma" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>Confirmar exclusão</h3>
+            <p id="confirma-msg" style="color: var(--text-light); margin-bottom: 20px;"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="fecharConfirma()">Cancelar</button>
+                <button type="button" class="btn-register" id="btn-confirma-sim" style="background: #991b1b; color: white;">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="avisos.js"></script>
+    <script src="financeiro.js"></script>
+    <script src="notificacoes.js"></script>
+    <script>
+        async function tentarNovaDespesa() {
+            await protegerAcao("admin", () => abrirModalNova('Despesa'));
+        }
+        async function tentarNovaReceita() {
+            await protegerAcao("admin", () => abrirModalNova('Receita'));
+        }
+        document.addEventListener("DOMContentLoaded", async () => {
+            const u = await obterPerfilAtual();
+            if (u && u.id_perfil !== 1) {
+                exibirAvisoRestricao("#aviso-restricao-financeiro",
+                    "Você pode <strong>visualizar</strong> os dados financeiros, mas apenas administradores podem <strong>criar, editar ou excluir</strong> movimentações.",
+                    { link: "perfil.html", linkTexto: "Solicitar acesso" }
+                );
+            }
+        });
+        const t = await toastCarregando("Salvando movimentação...");
+try {
+    const data = await fetchJson(url, { method: metodo, body: formData });
+    t.remove();
+    toast(data.mensagem || "Salvo!", "sucesso");
+    fecharModal();
+    carregarMovimentacoes();
+} catch (err) {
+    t.remove();
+    toast("Erro: " + err.message, "erro");
+}
+    </script>
+</body>
+</html>

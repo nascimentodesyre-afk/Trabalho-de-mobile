@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Envio de Notificações | IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html">Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html" class="active">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Envio de Notificações</h1>
+                    <p>Envie e-mails e avisos funcionais para os usuários do sistema</p>
+                </div>
+            </header>
+
+            <!-- TABS -->
+            <div class="notif-tabs">
+                <button class="notif-tab active" onclick="abrirTab('enviar', this)">📤 Enviar Notificação</button>
+                <button class="notif-tab" onclick="abrirTab('historico', this)">📋 Histórico de Envios</button>
+                <button class="notif-tab" onclick="abrirTab('config', this)">⚙️ Configuração SMTP</button>
+            </div>
+
+            <!-- ABA: ENVIAR -->
+            <div class="notif-tab-content active" id="tab-enviar">
+
+                <!-- STATUS SMTP -->
+                <div id="status-smtp" class="notif-config-section" style="display: none; border-left: 5px solid #b45309;">
+                    <h3>⚠️ Configuração SMTP pendente</h3>
+                    <p>O envio de e-mails ainda não está ativado. Vá até a aba <strong>Configuração SMTP</strong> para ativar.</p>
+                </div>
+
+                <div class="notif-envio-section">
+                    <h3>📝 Compor Notificação</h3>
+                    <p>Preencha os campos abaixo para enviar uma notificação.</p>
+
+                    <!-- Tipo -->
+                    <div class="notif-form-group" style="margin-bottom: 15px;">
+                        <label>Tipo de Notificação</label>
+                        <div class="notif-tipo-selector">
+                            <div class="notif-tipo-card selected" data-tipo="info" onclick="setTipo('info')">
+                                <span class="icone">ℹ️</span>
+                                <div class="nome">Informação</div>
+                            </div>
+                            <div class="notif-tipo-card" data-tipo="alerta" onclick="setTipo('alerta')">
+                                <span class="icone">⚠️</span>
+                                <div class="nome">Alerta</div>
+                            </div>
+                            <div class="notif-tipo-card" data-tipo="urgente" onclick="setTipo('urgente')">
+                                <span class="icone">🚨</span>
+                                <div class="nome">Urgente</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assunto -->
+                    <div class="notif-form-group" style="margin-bottom: 15px;">
+                        <label>Assunto *</label>
+                        <input type="text" id="notif-assunto" maxlength="150" placeholder="Ex: Manutenção programada no laboratório 04" required>
+                    </div>
+
+                    <!-- Mensagem -->
+                    <div class="notif-form-group" style="margin-bottom: 15px;">
+                        <label>Mensagem *</label>
+                        <textarea id="notif-mensagem" maxlength="2000" placeholder="Escreva a mensagem que será enviada..." required></textarea>
+                    </div>
+
+                    <!-- Link opcional -->
+                    <div class="notif-form-group" style="margin-bottom: 15px;">
+                        <label>Link de Ação (opcional)</label>
+                        <input type="url" id="notif-link" placeholder="Ex: http://localhost:5000/chamados.html">
+                    </div>
+
+                    <!-- Destinatários -->
+                    <div class="notif-form-group">
+                        <label>Destinatários *</label>
+
+                        <div class="destinatarios-atalhos">
+                            <button type="button" class="btn-atalho" onclick="selecionarTodos()">👥 Selecionar Todos</button>
+                            <button type="button" class="btn-atalho" onclick="selecionarAdmins()">🔑 Apenas ADMs</button>
+                            <button type="button" class="btn-atalho" onclick="limparSelecao()">✖ Limpar Seleção</button>
+                        </div>
+
+                        <div class="notif-destinatarios-box" id="lista-destinatarios">
+                            <em style="padding: 15px; display: block;">Carregando destinatários...</em>
+                        </div>
+
+                        <div class="notif-preview" id="preview-dest" style="display: none;">
+                            <strong>📤 Será enviado para:</strong>
+                            <span id="preview-dest-texto"></span>
+                        </div>
+                    </div>
+
+                    <!-- Ações -->
+                    <div class="notif-actions">
+                        <button type="button" class="btn-testar" onclick="enviarTeste()">
+                            🧪 Enviar Teste para Mim
+                        </button>
+                        <button type="button" class="btn-enviar" id="btn-enviar-notif" onclick="enviarNotificacao()">
+                            📤 Enviar Notificação
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA: HISTÓRICO -->
+            <div class="notif-tab-content" id="tab-historico">
+                <div class="notif-config-section">
+                    <h3>📋 Histórico de Envios</h3>
+                    <p>Últimas 50 notificações enviadas pelo sistema.</p>
+
+                    <div class="historico-notif" id="lista-historico">
+                        <em style="padding: 15px; display: block;">Carregando...</em>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA: CONFIGURAÇÃO SMTP -->
+            <div class="notif-tab-content" id="tab-config">
+                <div class="notif-config-section">
+                    <h3>⚙️ Configuração de E-mail (SMTP)</h3>
+                    <p>Configure as credenciais do servidor de envio de e-mail. Para Gmail, use uma <strong>senha de app</strong>.</p>
+
+                    <div class="toggle-switch" style="margin-bottom: 20px;">
+                        <input type="checkbox" id="smtp-ativo">
+                        <span>Ativar envio de e-mails</span>
+                    </div>
+
+                    <div class="notif-form-grid">
+                        <div class="notif-form-group">
+                            <label>Servidor SMTP</label>
+                            <input type="text" id="smtp-servidor" placeholder="smtp.gmail.com">
+                        </div>
+                        <div class="notif-form-group">
+                            <label>Porta</label>
+                            <input type="number" id="smtp-porta" placeholder="587">
+                        </div>
+                    </div>
+
+                    <div class="notif-form-grid">
+                        <div class="notif-form-group">
+                            <label>Usuário (e-mail)</label>
+                            <input type="email" id="smtp-usuario" placeholder="seuemail@gmail.com">
+                        </div>
+                        <div class="notif-form-group">
+                            <label>Senha (ou senha de app)</label>
+                            <input type="password" id="smtp-senha" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <div class="notif-form-group" style="margin-top: 15px;">
+                        <label>Nome do Remetente</label>
+                        <input type="text" id="smtp-remetente" placeholder="IPE - Sistema de Inventário">
+                    </div>
+
+                    <div class="notif-preview" style="background: #eff6ff; border-left-color: #1e40af; color: #1e3a8a; margin-top: 20px;">
+                        <strong>💡 Dica para Gmail:</strong>
+                        Ative a verificação em duas etapas na sua conta Google e gere uma <strong>senha de app</strong>
+                        em <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: #1e40af;">myaccount.google.com/apppasswords</a>.
+                        Use essa senha no campo acima.
+                    </div>
+
+                    <div class="notif-actions">
+                        <button type="button" class="btn-testar" onclick="testarSMTP()">
+                            🧪 Testar Configuração
+                        </button>
+                        <button type="button" class="btn-enviar" onclick="salvarConfigSMTP()">
+                            💾 Salvar Configuração
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+    <script src="avisos.js"></script>
+    <script src="notificacoes-envio.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chamados - IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .modal {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center; align-items: center; z-index: 1000;
+            padding: 20px;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white; padding: 25px; border-radius: 18px;
+            width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 15px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+        }
+        .historico-list, .anexos-list {
+            background: #fafafa; padding: 10px; border-radius: 8px;
+            font-size: 0.85rem; max-height: 150px; overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+        .historico-item, .anexo-item {
+            border-bottom: 1px solid #eef0f2; padding: 8px 0;
+        }
+        .historico-item:last-child, .anexo-item:last-child { border-bottom: none; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+        
+        /* ===== STEPPER "TIPO IFOOD" ===== */
+        .stepper {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 20px 0; padding: 0 10px; position: relative;
+        }
+        .stepper::before {
+            content: ''; position: absolute; top: 22px; left: 40px; right: 40px;
+            height: 3px; background: #e5e7eb; z-index: 0;
+        }
+        .stepper-etapa {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 6px; position: relative; z-index: 1; flex: 1;
+        }
+        .stepper-bolinha {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: white; border: 3px solid #d1d5db;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; color: #9ca3af; font-weight: 700; transition: 0.2s;
+        }
+        .stepper-etapa.feito .stepper-bolinha {
+            background: #15803d; border-color: #15803d; color: white;
+            box-shadow: 0 4px 12px rgba(21, 128, 61, 0.4);
+        }
+        .stepper-etapa.atual .stepper-bolinha {
+            background: linear-gradient(135deg, #FFD730, #F29310);
+            border-color: #F29310; color: #152937;
+            box-shadow: 0 4px 16px rgba(242, 147, 16, 0.5); animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .stepper-label {
+            font-size: 0.72rem; font-weight: 600; color: #5b6670;
+            text-align: center; text-transform: uppercase;
+        }
+        .stepper-etapa.feito .stepper-label { color: #15803d; }
+        .stepper-etapa.atual .stepper-label { color: #b45309; }
+
+        /* Botões de ação do chamado */
+        .btn-acao {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border: none; border-radius: 10px;
+            font-family: 'Poppins', sans-serif; font-size: 0.8rem;
+            font-weight: 600; cursor: pointer; transition: 0.15s; white-space: nowrap;
+        }
+        .btn-acao:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.10); }
+        .btn-acao.primario { background: linear-gradient(135deg, #F29310, #d97e0b); color: white; }
+        .btn-acao.secundario { background: #f3f4f6; color: #374151; }
+        .btn-acao.info { background: #e0e7ff; color: #3730a3; }
+        .btn-acao.sucesso { background: #dcfce7; color: #15803d; }
+        .btn-acao.concluir { background: linear-gradient(135deg, #22c55e, #15803d); color: white; }
+        .btn-acao.perigo { background: #fee2e2; color: #991b1b; }
+
+        /* Banner de leitura para usuários padrão */
+        .aviso-somente-leitura {
+            display: flex; align-items: center; gap: 8px;
+            background: #eff6ff; border-left: 4px solid #1e40af;
+            color: #1e3a8a; font-size: 0.85rem; font-weight: 500;
+            padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- SIDEBAR (Renderizada pelo Jinja) -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html">Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html" class="active">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Chamados Técnicos</h1>
+                    <p id="subtitulo-chamados">Você tem <strong id="qtd-meus-chamados">0</strong> chamados registrados.</p>
+                </div>
+                <div class="top-buttons">
+                    <a href="novo-chamado.html" class="btn-register">+ Abrir Chamado</a>
+                </div>
+            </header>
+
+            <!-- Aviso para Usuário Padrão (Injetado via JS se id_perfil !== 1) -->
+            <div id="aviso-restricao-chamados"></div>
+
+            <section class="cards" style="margin-bottom: 35px;">
+                <div class="card"><h3>Abertos</h3><p id="resumo-abertos">–</p></div>
+                <div class="card"><h3>Em Atendimento</h3><p id="resumo-andamento">–</p></div>
+                <div class="card"><h3>Concluídos</h3><p id="resumo-concluidos">–</p></div>
+            </section>
+
+            <section class="inventory-section">
+                <div class="section-title"><h2>Lista de Chamados</h2></div>
+
+                <!-- Filtros de Busca -->
+                <form class="form-ipe" style="flex-direction: row; flex-wrap: wrap; align-items: flex-end; margin-top: 0; margin-bottom: 20px;" onsubmit="return false;">
+                    <div class="form-group" style="flex: 1; min-width: 200px;">
+                        <label for="filtro-busca">Buscar</label>
+                        <input type="text" id="filtro-busca" placeholder="Descrição, patrimônio ou solicitante..." oninput="aplicarFiltros()">
+                    </div>
+                    <div class="form-group" style="min-width: 160px;">
+                        <label for="filtro-status">Status</label>
+                        <select id="filtro-status" onchange="aplicarFiltros()">
+                            <option value="">Todos</option>
+                            <option value="1">Aberto</option>
+                            <option value="2">Em Atendimento</option>
+                            <option value="3">Concluído</option>
+                            <option value="4">Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="min-width: 160px;">
+                        <label for="filtro-prioridade">Prioridade</label>
+                        <select id="filtro-prioridade" onchange="aplicarFiltros()">
+                            <option value="">Todas</option>
+                            <option value="Baixa">Baixa</option>
+                            <option value="Media">Média</option>
+                            <option value="Alta">Alta</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="min-width: auto;">
+                        <button type="button" onclick="limparFiltros()" class="btn-login">Limpar</button>
+                    </div>
+                </form>
+
+                <p id="filtro-contador" style="color: var(--text-light); font-size: 0.85rem; margin-bottom: 12px;"></p>
+
+                <div style="overflow-x: auto;">
+                    <table id="tabela-chamados-wrapper">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data Abertura</th>
+                                <th>Solicitante</th>
+                                <th>Patrimônio</th>
+                                <th>Descrição</th>
+                                <th>Prioridade</th>
+                                <th>Status</th>
+                                <th class="col-acoes">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-chamados"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: DETALHES / GERENCIAR CHAMADO -->
+    <div id="modal-acao" class="modal">
+        <div class="modal-content">
+            <h3 style="display:flex; justify-content:space-between;">
+                <span>Chamado <span id="modal-id-chamado"></span></span>
+                <button type="button" onclick="document.getElementById('modal-acao').classList.remove('show')" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
+            </h3>
+
+            <!-- STEPPER -->
+            <div id="stepper-status" class="stepper"></div>
+
+            <!-- PREVISÃO DE CONCLUSÃO -->
+            <div id="modal-previsao" style="display:none; margin-top:10px; background:#eff6ff; border-left:4px solid #1e40af; padding:10px 14px; border-radius:8px; font-size:0.85rem; color:#1e3a8a;">
+                📅 <strong>Previsão de conclusão:</strong> <span id="previsao-texto">—</span>
+            </div>
+
+            <!-- BENS VINCULADOS -->
+            <div style="margin-top:15px;">
+                <strong>Bens vinculados:</strong>
+                <div id="lista-bens" style="background:#fafafa; padding:10px 14px; border-radius:8px; max-height:120px; overflow-y:auto; margin-top:6px; font-size:0.85rem;">
+                    <em>Carregando...</em>
+                </div>
+            </div>
+
+            <!-- DESCRIÇÃO DO PROBLEMA -->
+            <div style="margin-top:12px;">
+                <strong>Problema Relatado:</strong>
+                <div id="modal-descricao" style="background:#fafafa; padding:10px 14px; border-radius:8px; margin-top:6px; font-size:0.85rem;">—</div>
+            </div>
+
+            <!-- PRIORIDADE -->
+            <div id="prioridade-container" style="margin-top:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <strong>Prioridade:</strong>
+                <select id="select-prioridade" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; font-family:Poppins; font-size:0.85rem;">
+                    <option value="Baixa">Baixa</option>
+                    <option value="Media">Média</option>
+                    <option value="Alta">Alta</option>
+                </select>
+                <button type="button" class="btn-acao info" id="btn-salvar-prioridade" style="padding:6px 12px;">Salvar prioridade</button>
+            </div>
+
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border);">
+
+            <!-- BOTÕES DE AÇÃO CONTEXTUAIS (Só ADM vê) -->
+            <div id="acoes-chamado" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                <button type="button" class="btn-acao sucesso" id="btn-iniciar-reparo" style="display:none;">🔧 Iniciar Reparo</button>
+                <button type="button" class="btn-acao concluir" id="btn-finalizar-reparo" style="display:none;">✅ Finalizar Reparo</button>
+                <button type="button" class="btn-acao perigo" id="btn-cancelar-chamado" style="display:none;">🚫 Cancelar Chamado</button>
+                <button type="button" class="btn-acao info" id="btn-reabrir-chamado" style="display:none;">↻ Reabrir</button>
+                <button type="button" class="btn-acao perigo" id="btn-excluir-chamado" style="display:none;">🗑 Excluir Chamado</button>
+            </div>
+
+            <!-- PAINEL DE MANUTENÇÃO -->
+            <div id="painel-manutencao" style="display:none; background:#f0f7f4; border-left:4px solid #2e7d32; padding:12px 16px; border-radius:8px; margin-bottom:14px; font-size:0.85rem; color:#1b4332;">
+                <strong>🛠️ Manutenção registrada:</strong>
+                <div id="manutencao-info" style="margin-top:6px;"></div>
+            </div>
+
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border);">
+
+            <!-- FORM STATUS RÁPIDO (Só ADM vê) -->
+            <form id="form-status" class="form-ipe" style="display:none;">
+                <div class="form-group">
+                    <label><strong>Atualizar Status (rápido):</strong></label>
+                    <select id="select-status" required>
+                        <option value="1">Aberto</option>
+                        <option value="2">Em Atendimento</option>
+                        <option value="3">Concluído</option>
+                        <option value="4">Cancelado</option>
+                    </select>
+                </div>
+                <button type="button" id="btn-salvar-status" class="btn-register">Atualizar Status</button>
+            </form>
+
+            <!-- ANEXOS -->
+            <div style="margin-top:15px;">
+                <strong>Anexos:</strong>
+                <div id="lista-anexos" class="anexos-list"><em>Carregando...</em></div>
+            </div>
+
+            <div style="margin-top:15px;">
+                <form id="form-foto" class="form-ipe" style="margin-top:5px;">
+                    <div class="form-group">
+                        <label><strong>Anexar Nova Imagem/Foto:</strong></label>
+                        <input type="file" id="input-foto" accept="image/*">
+                    </div>
+                    <button type="button" id="btn-enviar-foto" class="btn-login">Enviar Anexo</button>
+                </form>
+            </div>
+
+            <div style="margin-top:15px;">
+                <strong>Histórico do Chamado:</strong>
+                <div id="lista-historico" class="historico-list"><em>Carregando...</em></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL: FINALIZAR REPARO -->
+    <div id="modal-finalizar" class="modal">
+        <div class="modal-content" style="max-width:520px;">
+            <h3>Finalizar Reparo</h3>
+            <form id="form-finalizar" class="form-ipe">
+                <div class="form-group">
+                    <label><strong>Observação do serviço realizado *</strong></label>
+                    <textarea id="finalizar-obs" rows="4" required minlength="10" placeholder="Descreva o que foi feito no equipamento (mín. 10 caracteres)" style="width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-family:Poppins; resize:vertical;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Custo final (R$) — opcional</label>
+                    <input type="number" step="0.01" min="0" id="finalizar-custo" placeholder="0.00" style="width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-family:Poppins;">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="document.getElementById('modal-finalizar').classList.remove('show')">Cancelar</button>
+                    <button type="submit" class="btn-register" style="background:#15803d; color:white;">✅ Confirmar Conclusão</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="avisos.js"></script>
+    <script src="chamados.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>
