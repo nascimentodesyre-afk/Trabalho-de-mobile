@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sobre | IPE</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html">Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html"class="active">Sobre</a></li>
+                </ul>
+            </nav>
+
+        </aside>
+
+        <!-- CONTEÚDO -->
+        <main class="main-content">
+
+            <!-- TOPO -->
+            <header class="topbar">
+
+                <div>
+                    <h1>Sobre o Projeto IPE</h1>
+                </div>
+
+            </header>
+
+            <!-- HERO -->
+            <section class="hero-dashboard">
+
+                <div class="hero-left">
+                    <p>
+                        O IPE é um sistema desenvolvido para auxiliar escolas
+                        no gerenciamento de patrimônio, inventário,
+                        manutenção e organização de equipamentos.
+                    </p>
+                </div>
+
+            </section>
+
+            <!-- SOBRE -->
+            <section class="sobre">
+
+                <h2>Objetivo do Sistema</h2>
+
+                <p>
+                    O Projeto do IPE (Sistema de Inventário de Patrimônio Escolar) 
+                    surge como uma proposta de maior automatização, agilização e 
+                    praticidade para o Instituto Superior de Educação Professor Aldo Muylaert - ISEPAM. 
+                    Bem como, ser desenvolvido para a resolução da problemática de gerenciamento
+                    de recursos de Inventário do Patrimônio da instituição. 
+                    Esse projeto em sua totalidade busca resolver as adversidades da comunicação 
+                    entre os setores da instituição principalmente para a ocorrência de obstrução
+                    e defeitos nos itens comuns da escola, como por exemplo, lâmpadas queimadas,
+                    cadeiras quebradas, computadores e demais equipamentos tecnológicos com 
+                    problemas em geral. Além disso, visa armazenar o Patrimônio Escolar.
+                </p>
+
+                <p>
+                    Protótipo
+                </p>
+
+            </section>
+
+            <!-- FUNCIONALIDADES -->
+            <section class="inventory-section">
+
+                <div class="section-title">
+                    <h2>Principais Funcionalidades</h2>
+                </div>
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Página Inicial e Página Sobre</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+                            <td>Inventário</td>
+
+                            <td>
+                                Cadastro e gerenciamento dos itens pelos Administradores.
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Chamados</td>
+
+                            <td>
+                                Controle de suporte técnico e manutenção.
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Financeiro</td>
+
+                            <td>
+                                Registro de despesas e investimentos.
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </section>
+
+            <!-- EQUIPE -->
+            <section class="sobre">
+
+                <h2>Equipe Desenvolvedora</h2>
+
+                <p>
+                    Projeto desenvolvido pelos alunos do
+                    3º Ano Técnico em Informática.
+                </p>
+
+                <div class="criadores">
+
+                    <h3>Integrantes</h3>
+
+                    <ul>
+                        <li>Bernardo Manhães</li>
+                        <li>Desyrê Ananias</li>
+                        <li>Isaac de Oliveira</li>
+                        <li>Mary Hellen do Nascimento</li>
+                    </ul>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="avisos.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>
+</html>

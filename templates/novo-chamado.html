@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Chamado - IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html" >Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html" class="active">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Abrir Chamado Técnico</h1>
+                    <p>Registre um problema com um patrimônio cadastrado no inventário</p>
+                </div>
+
+                <div class="top-buttons">
+                    <a href="chamados.html" class="btn-register">← Voltar para Chamados</a>
+                </div>
+            </header>
+
+            <section class="inventory-section">
+                <form id="form-novo-chamado" class="form-ipe" enctype="multipart/form-data">
+                    
+                    <!-- Ligação com a classe Patrimonio (id_patrimonio) -->
+                    <div class="form-group">
+                        <label for="id_patrimonio"><strong>Patrimônio (Inventário):</strong></label>
+                        <select id="id_patrimonio" name="id_patrimonio" required 
+                                style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; font-family: 'Poppins';">
+                            <option value="">Carregando patrimônios...</option>
+                        </select>
+                        <small style="color: #666; font-size: 0.8rem; margin-top: 4px; display: block;">
+                            Selecione o item do inventário que está com problema.
+                        </small>
+                    </div>
+              
+                    <!-- Ligação com a classe Tipo_chamado (id_tipo_chamado) -->
+                    <div class="form-group">
+                        <label for="id_tipo_chamado"><strong>Tipo de Chamado:</strong></label>
+                        <select id="id_tipo_chamado" name="id_tipo_chamado" required>
+                            <option value="">Carregando tipos de chamado...</option>
+                        </select>
+                    </div>
+
+                    <!-- Atributo prioridade (enum: Baixa, Media, Alta) -->
+                    <div class="form-group">
+                        <label for="prioridade"><strong>Prioridade:</strong></label>
+                        <select id="prioridade" name="prioridade" required>
+                            <option value="Baixa">Baixa</option>
+                            <option value="Media" selected>Média</option>
+                            <option value="Alta">Alta</option>
+                        </select>
+                    </div>
+
+                    <!-- Atributo data_previsao_conclusao -->
+                    <div class="form-group">
+                        <label for="data_previsao_conclusao"><strong>Previsão de Conclusão (Opcional):</strong></label>
+                        <input type="date" id="data_previsao_conclusao" name="data_previsao_conclusao">
+                    </div>
+
+                    <!-- Atributo descricao_problema -->
+                    <div class="form-group">
+                        <label for="descricao_problema"><strong>Descrição do Problema:</strong></label>
+                        <textarea id="descricao_problema" name="descricao_problema" rows="4" required placeholder="Detalhe o defeito ou necessidade de manutenção..."></textarea>
+                    </div>
+
+                    <!-- Ligação com a classe Anexo -->
+                    <div class="form-group">
+                        <label for="anexo"><strong>Anexar Imagem ou Documento (Opcional):</strong></label>
+                        <input type="file" id="anexo" name="anexo" accept="image/*,.pdf">
+                    </div>
+
+                    <button type="submit" class="btn-login" id="btn-cadastrar">Cadastrar Chamado</button>
+                </form>
+            </section>
+        </main>
+    </div>
+    
+    <script src="avisos.js"></script>
+    <script src="novo-chamados.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>

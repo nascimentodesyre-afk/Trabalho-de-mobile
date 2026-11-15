@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventário - IPE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 450px;
+        display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow-y: auto; }
+    .modal-detalhes { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+    .modal-detalhes.show { display: flex; }
+    .modal-detalhes-content { background: white; padding: 0; border-radius: 18px; width: 100%; max-width: 800px;
+        max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,0.3); position: relative; }
+    .modal-detalhes-header { padding: 25px 30px; border-bottom: 1px solid var(--border); display: flex;
+        justify-content: space-between; align-items: flex-start; gap: 15px; position: sticky; top: 0;
+        background: white; z-index: 2; border-radius: 18px 18px 0 0; }
+    .modal-detalhes-header h3 { color: var(--dark); font-size: 1.3rem; line-height: 1.3; }
+    .modal-detalhes-header .numero { font-size: 0.85rem; color: var(--text-light); margin-top: 4px; }
+    .btn-fechar { background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%;
+        cursor: pointer; font-size: 1.2rem; color: var(--text); transition: 0.15s; flex-shrink: 0; }
+    .btn-fechar:hover { background: #e5e7eb; }
+    .modal-detalhes-body { padding: 25px 30px 30px; }
+
+    .flash-msg { padding: 12px 18px; border-radius: 12px; font-weight: 500; margin-bottom: 8px; }
+    .flash-erro { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .flash-sucesso { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+    .pagination-wrapper {
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+        gap: 12px; margin-top: 18px; padding: 14px 18px;
+        background: #fafafa; border-radius: 12px; border: 1px solid #eef0f2;
+    }
+    .pagination-info { font-size: 0.85rem; color: var(--text-light); }
+    .pagination-info strong { color: var(--dark); font-weight: 700; }
+    .pagination-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .pg-btn {
+        min-width: 36px; height: 36px; padding: 0 10px;
+        border-radius: 8px; border: 1px solid #d1d5db;
+        background: white; color: var(--text);
+        font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.82rem;
+        cursor: pointer; transition: 0.15s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .pg-btn:hover:not(:disabled):not(.pg-active) { background: var(--primary); border-color: var(--primary-dark); }
+    .pg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pg-btn.pg-active {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        border-color: var(--primary-dark); color: var(--dark);
+        box-shadow: 0 3px 8px rgba(242, 147, 16, 0.3); cursor: default;
+    }
+    .pg-dots { color: var(--text-light); font-weight: 600; padding: 0 4px; }
+    .pg-size { display: flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 0.78rem; color: var(--text-light); }
+    .pg-select {
+        padding: 6px 10px; border-radius: 8px; border: 1px solid #d1d5db;
+        background: white; font-family: 'Poppins', sans-serif; font-size: 0.8rem; cursor: pointer;
+    }
+    @media (max-width: 600px) {
+        .pagination-wrapper { flex-direction: column; align-items: stretch; }
+        .pagination-controls { justify-content: center; }
+    }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="perfil.html">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html" class="active">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html">Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h1>Gestão de Patrimônio</h1>
+                    <p>Controle de bens, salas alocadas e depreciação acumulada</p>
+                </div>
+                <div class="top-buttons">
+    <button onclick="tentarAbrirModalImportar()" class="btn-login" id="btn-importar" style="margin-right: 8px; display: none;">📥 Importar CSV</button>
+    <button onclick="tentarAbrirModalSala()" class="btn-login" id="btn-nova-sala" style="margin-right: 8px; display: none;">+ Nova Sala</button>
+    <button onclick="exportarInventarioPDF()" class="btn-login" id="btn-exportar-pdf" style="margin-right: 8px; display: none;">📄 Exportar PDF</button>
+    <button onclick="tentarAbrirModalPatrimonio()" class="btn-register" id="btn-novo-patrimonio" style="display: none;">+ Novo Patrimônio</button>
+</div>
+            </header>
+
+            <div id="aviso-restricao-inventario"></div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div style="margin-bottom: 20px;">
+                  {% for categoria, msg in messages %}
+                    <div class="flash-msg {% if categoria == 'erro' %}flash-erro{% else %}flash-sucesso{% endif %}">
+                      {{ msg }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            <div class="filtros-container">
+                <div class="filtros-header">
+                    <div class="filtros-titulo">
+                        <span class="icone">🔍</span>
+                        Filtros de Busca
+                        <span id="filtro-contador-chips" style="background: var(--primary-dark); color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; display: none;">0</span>
+                    </div>
+                    <div class="filtros-acoes">
+                        <button class="btn-toggle-filtros" onclick="toggleFiltrosAvancados()" id="btn-toggle-avancado">⚙️ Mais filtros</button>
+                        <button class="btn-limpar-filtros" onclick="limparFiltros()" id="btn-limpar" style="display: none;">✖ Limpar filtros</button>
+                    </div>
+                </div>
+
+                <div class="chips-ativos" id="chips-ativos"></div>
+
+                <div class="filtros-grid">
+                    <div class="filtro-group">
+                        <label>Buscar</label>
+                        <input type="text" id="f-busca" placeholder="Nome, nº, NF, código nacional ou responsável..."
+                               oninput="agendarBusca()">
+                    </div>
+                    <div class="filtro-group">
+                        <label>Categoria</label>
+                        <select id="f-categoria" onchange="buscar(1)"><option value="">Todas</option></select>
+                    </div>
+                    <div class="filtro-group">
+                        <label>Sala</label>
+                        <select id="f-sala" onchange="buscar(1)"><option value="">Todas</option></select>
+                    </div>
+                    <div class="filtro-group">
+                        <label>Status</label>
+                        <select id="f-status" onchange="buscar(1)"><option value="">Todos</option></select>
+                    </div>
+                </div>
+
+                <div class="filtros-avancados" id="filtros-avancados">
+                    <div class="filtros-grid-secundario">
+                        <div class="filtro-group">
+                            <label>Valor Mínimo (R$)</label>
+                            <input type="number" id="f-valor-min" step="0.01" min="0" placeholder="0,00" oninput="agendarBusca()">
+                        </div>
+                        <div class="filtro-group">
+                            <label>Valor Máximo (R$)</label>
+                            <input type="number" id="f-valor-max" step="0.01" min="0" placeholder="99999,99" oninput="agendarBusca()">
+                        </div>
+                        <div class="filtro-group">
+                            <label>Aquisição a partir de</label>
+                            <input type="date" id="f-data-ini" onchange="buscar(1)">
+                        </div>
+                        <div class="filtro-group">
+                            <label>Aquisição até</label>
+                            <input type="date" id="f-data-fim" onchange="buscar(1)">
+                        </div>
+                    </div>
+                    <div class="filtros-grid-secundario" style="margin-top: 12px;">
+                        <div class="filtro-group" style="grid-column: span 2;">
+                            <label>Incluir baixados?</label>
+                            <select id="f-incluir-baixados" onchange="buscar(1)">
+                                <option value="0">Não (padrão)</option>
+                                <option value="1">Sim</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <section class="inventory-section">
+                <div class="section-title">
+                    <h2>Bens Cadastrados</h2>
+                </div>
+
+                <div class="resultados-bar">
+                    <div class="resultados-info" id="resultados-info">Carregando...</div>
+                    <div class="resultados-totais">
+                        <span class="total-item">Compra: <strong id="total-compra">R$ 0,00</strong></span>
+                        <span class="total-item">Atual: <strong id="total-atual">R$ 0,00</strong></span>
+                    </div>
+                </div>
+
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner"></div>
+                    <div>Buscando patrimônios...</div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table id="tabela-inventario-wrapper">
+                        <thead>
+                            <tr>
+                                <th>Foto</th>
+                                <th class="sortable" data-campo="numero" onclick="ordenarPor('numero')">Nº Patrimônio</th>
+                                <th class="sortable" data-campo="nome" onclick="ordenarPor('nome')">Nome do Bem</th>
+                                <th>Extras</th>
+                                <th class="sortable" data-campo="categoria" onclick="ordenarPor('categoria')">Categoria</th>
+                                <th class="sortable" data-campo="sala" onclick="ordenarPor('sala')">Sala / Bloco</th>
+                                <th class="sortable" data-campo="data" onclick="ordenarPor('data')">Data Aquisição</th>
+                                <th class="sortable" data-campo="valor" onclick="ordenarPor('valor')">Valor Compra</th>
+                                <th>Valor Atual</th>
+                                <th class="sortable" data-campo="status" onclick="ordenarPor('status')">Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-inventario">
+                            <tr><td colspan="11" style="text-align:center;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="paginacao-inventario"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-detalhes" class="modal-detalhes">
+        <div class="modal-detalhes-content">
+            <div class="modal-detalhes-header">
+                <div>
+                    <h3 id="detalhes-nome">Carregando...</h3>
+                    <div class="numero" id="detalhes-numero"></div>
+                </div>
+                <button class="btn-fechar" onclick="fecharDetalhes()">✕</button>
+            </div>
+            <div class="modal-detalhes-body" id="detalhes-body">
+                <em>Carregando...</em>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" class="lightbox" onclick="fecharLightbox()">
+        <button class="fechar-lightbox" onclick="fecharLightbox()">✕</button>
+        <img id="lightbox-img" src="" alt="Foto ampliada" onclick="event.stopPropagation()">
+    </div>
+
+    <div id="modal-patrimonio" class="modal">
+        <div class="modal-content">
+            <h3>Cadastrar Novo Patrimônio</h3>
+            <form id="form-novo-patrimonio" class="form-ipe">
+                <div class="form-group">
+                    <label>Nome do Item:</label>
+                    <input type="text" name="nome" required placeholder="Ex: Projetor Epson">
+                </div>
+                <div class="form-group">
+                    <label>Número do Patrimônio:</label>
+                    <input type="text" name="numero_patrimonio" required placeholder="Ex: 20260900">
+                </div>
+                <div class="form-group">
+                    <label>Categoria (Portaria CGE 195/2016):</label>
+                    <select name="id_categoria" id="select-categorias" required>
+                        <option value="">Carregando categorias...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sala de Alocação:</label>
+                    <select name="id_sala" id="select-salas" required>
+                        <option value="">Selecione uma Sala...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor de Compra (R$):</label>
+                    <input type="number" step="0.01" name="valor_compra" required placeholder="1500.00">
+                </div>
+                <div class="form-group">
+                    <label>Data de Aquisição:</label>
+                    <input type="date" name="data_aquisicao" required>
+                </div>
+                <div class="form-group">
+                    <label>Taxa de Depreciação Anual (%):</label>
+                    <input type="number" step="0.1" name="taxa_depreciacao" value="10.0" required>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button type="submit" class="btn-register" id="btn-salvar-patrimonio" style="flex:1;">Salvar</button>
+                    <button type="button" onclick="fecharModais()" class="btn-login">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-sala" class="modal">
+        <div class="modal-content">
+            <h3>Cadastrar Nova Sala</h3>
+            <form id="form-sala" class="form-ipe">
+                <div class="form-group">
+                    <label>Nome / Número da Sala:</label>
+                    <input type="text" id="sala-nome" required placeholder="Ex: Laboratório 04">
+                </div>
+                <div class="form-group">
+                    <label>Bloco / Prédio:</label>
+                    <input type="text" id="sala-bloco" placeholder="Ex: Bloco B">
+                </div>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button type="button" onclick="cadastrarSala()" class="btn-register" style="flex:1;">Cadastrar Sala</button>
+                    <button type="button" onclick="fecharModais()" class="btn-login">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-importar" class="modal-importar">
+        <div class="modal-importar-content">
+            <div class="modal-importar-header">
+                <h3>📥 Importar Patrimônios em Lote</h3>
+                <button class="btn-fechar" onclick="fecharModalImportar()">✕</button>
+            </div>
+            <div class="modal-importar-body">
+                <div class="import-etapa ativa" id="import-etapa-1">
+                    <div class="instrucoes-import">
+                        <strong>📋 Como funciona:</strong>
+                        <ol style="margin: 8px 0 0 20px; padding: 0;">
+                            <li>Baixe o <strong>modelo CSV</strong> abaixo (ou use o seu próprio)</li>
+                            <li>Preencha com os dados dos patrimônios</li>
+                            <li>Faça upload do arquivo — o sistema valida cada linha</li>
+                            <li>Revise o preview e confirme a importação</li>
+                        </ol>
+                        <div style="margin-top: 12px;">
+                            <a href="/api/inventario/modelo-csv" class="btn-baixar-modelo" download>
+                                ⬇ Baixar Modelo CSV
+                            </a>
+                        </div>
+                        <div style="margin-top: 12px; font-size: 0.8rem;">
+                            <strong>Colunas obrigatórias:</strong>
+                            <code>nome</code> <code>numero_patrimonio</code> <code>valor_compra</code> <code>data_aquisicao</code>
+                        </div>
+                    </div>
+                    <div class="upload-csv-area" id="upload-csv-area"
+                         onclick="document.getElementById('input-csv').click()"
+                         ondragover="event.preventDefault(); this.classList.add('dragover')"
+                         ondragleave="this.classList.remove('dragover')"
+                         ondrop="handleDropCSV(event)">
+                        <span class="icone">📄</span>
+                        <p>Clique ou arraste o arquivo CSV aqui</p>
+                        <small>Formatos: .csv · Separador: ; ou ,</small>
+                        <input type="file" id="input-csv" accept=".csv,text/csv" style="display:none" onchange="uploadCSV(this.files[0])">
+                    </div>
+                </div>
+                <div class="import-etapa" id="import-etapa-2">
+                    <div id="import-resumo-container"></div>
+                    <div id="import-preview-container"></div>
+                </div>
+                <div class="import-etapa" id="import-etapa-3">
+                    <div class="resultado-import" id="resultado-import-container"></div>
+                </div>
+            </div>
+            <div class="modal-importar-footer" id="import-footer">
+                <button type="button" class="btn-login" onclick="voltarEtapaImport()" id="btn-voltar-import" style="display: none;">← Voltar</button>
+                <div style="flex: 1;"></div>
+                <button type="button" class="btn-login" onclick="fecharModalImportar()">Cancelar</button>
+                <button type="button" class="btn-register" onclick="confirmarImportacao()" id="btn-confirmar-import" style="display: none;">✅ Confirmar Importação</button>
+                <button type="button" class="btn-register" onclick="fecharModalImportar(); buscar(1);" id="btn-concluir-import" style="display: none;">✅ Concluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!--
+        CACHE BUSTER: o "?v=" com número aleatório a cada render
+        força o navegador a baixar SEMPRE a versão nova do arquivo.
+        Em produção, troque pelo hash do arquivo (ex.: md5 do conteúdo).
+    -->
+   <script src="avisos.js?v={{ range(1, 999999) | random }}"></script>
+<script src="inventario.js?v={{ range(1, 999999) | random }}"></script>
+<script src="menu.js?v={{ range(1, 999999) | random }}"></script>
+<script src="notificacoes.js?v={{ range(1, 999999) | random }}"></script>
+<script>const t = await toastCarregando("Cadastrando patrimônio...");
+try {
+    const res = await fetchJson("/api/inventario/cadastrar", { method: "POST", body: formData });
+    t.remove();
+    toast(res.mensagem, "sucesso");
+    fecharModais();
+    buscar();
+} catch (err) {
+    t.remove();
+    toast("Erro: " + err.message, "erro", 6000);
+}
+</script>
+
+</body>
+</html>

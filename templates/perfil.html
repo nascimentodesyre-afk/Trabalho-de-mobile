@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPE - Meu Perfil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- ================= MENU LATERAL ================= -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-circle"><img src="img/logo.png" alt="Logo IPE"></div>
+                <h2>IPE</h2>
+                <p>Sistema de Inventário</p>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="perfil.html"class="active">Meu Perfil</a></li>
+                    <li><a href="index.html">Página Inicial</a></li>
+                    <li><a href="inventario.html">Inventário</a></li>
+                    {% if is_admin %}<li><a href="alugados.html">Bens Alugados</a></li>{% endif %}
+                    <li><a href="movimentacoes.html">Movimentações</a></li>
+                    {% if is_admin %}<li><a href="baixa.html" >Baixa e Inutilização</a></li>{% endif %}
+                    <li><a href="chamados.html">Chamados</a></li>
+                    <li><a href="reparos.html">Histórico de Reparos</a></li>
+                    <li><a href="historico.html">Histórico</a></li>
+                    {% if is_admin %}<li><a href="financeiro.html">Financeiro</a></li>{% endif %}
+                    {% if is_admin or is_direcao %}<li><a href="relatorios.html">Relatórios</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="admin.html">Painel ADM</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="notificacoes-envio.html">Enviar Notificações</a></li>{% endif %}
+                    {% if is_admin %}<li><a href="backup.html">Backup</a></li>{% endif %}
+                    <li><a href="sobre.html">Sobre</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- ================= CONTEÚDO PRINCIPAL ================= -->
+        <main class="main-content">
+
+            <header class="topbar">
+                <div>
+                    <h1>Meu Perfil</h1>
+                    <p>Gerencie seus dados de acesso ao sistema</p>
+                </div>
+                <div class="top-buttons">
+                    <a href="/logout" class="btn-login">Sair</a>
+                </div>
+            </header>
+
+            <!-- ---------- MENSAGENS VINDAS DO SERVIDOR ---------- -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for categoria, message in messages %}
+                  {% if categoria == 'sucesso' %}
+                    <div style="padding: 12px 16px; margin-bottom: 20px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 12px; font-weight: 500; font-size: 0.9rem;">
+                      {{ message }}
+                    </div>
+                  {% else %}
+                    <div style="padding: 12px 16px; margin-bottom: 20px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 12px; font-weight: 500; font-size: 0.9rem;">
+                      {{ message }}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <!-- Mensagem gerada pela validação no navegador -->
+            <div id="alerta-cliente"
+                 style="display:none; padding: 12px 16px; margin-bottom: 20px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 12px; font-weight: 500; font-size: 0.9rem;">
+            </div>
+
+            <!-- ---------- IDENTIFICAÇÃO DO USUÁRIO ---------- -->
+            <section class="profile-section" style="margin-bottom: 35px;">
+                <header class="profile-header">
+                    <div class="profile-avatar">
+                        <span id="avatar-letra">·</span>
+                    </div>
+
+                    <div class="profile-info">
+                        <h3 id="profile-title">Carregando...</h3>
+                        <p id="profile-email">—</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                            <span class="status ativo">Ativo</span>
+                            <span id="profile-role" class="status manutencao">—</span>
+                        </div>
+                    </div>
+                </header>
+
+                <p style="color: var(--text-light); font-size: 0.95rem;">
+                    Resumo dos chamados que você abriu no sistema:
+                </p>
+            </section>
+
+            <!-- ---------- ESTATÍSTICAS (reaproveita .cards/.card) ---------- -->
+            <section class="cards" style="margin-bottom: 35px;">
+                <div class="card">
+                    <h3>Aguardando Atendimento</h3>
+                    <p id="stat-abertos">–</p>
+                </div>
+                <div class="card">
+                    <h3>Em Atendimento</h3>
+                    <p id="stat-andamento">–</p>
+                </div>
+                <div class="card">
+                    <h3>Concluídos</h3>
+                    <p id="stat-concluidos">–</p>
+                </div>
+            </section>
+
+            <!-- Tabela de Chamados Recentes do Usuário (Prova visual do 1:N) -->
+<section class="inventory-section" style="margin-bottom: 35px;">
+    <div class="section-title">
+        <h2>Meus Chamados Recentes</h2>
+        <p style="color: var(--text-light); font-size: 0.9rem;">
+            Histórico dos últimos chamados abertos por você.
+        </p>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Data</th>
+                    <th>Patrimônio</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-meus-chamados">
+                <tr><td colspan="5" style="text-align:center;">Carregando seus chamados...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+            <!-- ---------- FORMULÁRIO DE EDIÇÃO ---------- -->
+            <form action="/atualizar_perfil" method="POST" id="form-perfil">
+
+                <!-- Bloco 1: dados cadastrais -->
+                <section class="inventory-section">
+                    <div class="section-title">
+                        <h2>Dados Cadastrais</h2>
+                        <p style="color: var(--text-light); font-size: 0.9rem;">
+                            Informações que identificam você no sistema.
+                        </p>
+                    </div>
+
+                    <div class="profile-form">
+                        <div class="input-group">
+                            <label for="nome">Nome Completo</label>
+                            <input type="text" id="nome" name="nome" required maxlength="100"
+                                   autocomplete="name" placeholder="Seu nome completo">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="email">E-mail</label>
+                            <input type="email" id="email" name="email" required
+                                   autocomplete="email" placeholder="seu@email.com">
+                            <small style="margin-top: 6px; font-size: 0.78rem; color: var(--text-light);">
+                                Usado para entrar no sistema.
+                            </small>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bloco 2: segurança -->
+                <section class="inventory-section">
+                    <div class="section-title">
+                        <h2>Segurança</h2>
+                        <p style="color: var(--text-light); font-size: 0.9rem;">
+                            Preencha apenas se quiser trocar a senha.
+                        </p>
+                    </div>
+
+                    <div class="profile-form">
+                        <div class="input-group">
+                            <label for="senha">Nova Senha</label>
+                            <input type="password" id="senha" name="senha" minlength="4"
+                                   autocomplete="new-password" placeholder="Deixe em branco para não alterar">
+                            <small style="margin-top: 6px; font-size: 0.78rem; color: var(--text-light);">
+                                Mínimo de 4 caracteres.
+                            </small>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="confirmar-senha">Confirmar Nova Senha</label>
+                            <input type="password" id="confirmar-senha" minlength="4"
+                                   autocomplete="new-password" placeholder="Repita a nova senha">
+                        </div>
+
+                        <label class="admin-check">
+                            <input type="checkbox" id="ver-senha">
+                            Mostrar senhas
+                        </label>
+
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
+                            <button type="submit" class="btn-save" style="margin-top: 0;">Salvar Alterações</button>
+                            <button type="button" id="btn-desfazer" class="btn-login"
+                                    style="cursor: pointer; font-family: 'Poppins', sans-serif; font-size: 0.95rem;">
+                                Desfazer alterações
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </form>
+
+        </main>
+    </div>
+
+    <script>
+        // Guarda os valores originais para o botão "Desfazer"
+        let dadosOriginais = { nome: "", email: "" };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarPerfil();
+
+            document.getElementById('ver-senha').addEventListener('change', (e) => {
+                const tipo = e.target.checked ? 'text' : 'password';
+                document.getElementById('senha').type = tipo;
+                document.getElementById('confirmar-senha').type = tipo;
+            });
+
+            document.getElementById('btn-desfazer').addEventListener('click', () => {
+                document.getElementById('nome').value = dadosOriginais.nome;
+                document.getElementById('email').value = dadosOriginais.email;
+                document.getElementById('senha').value = '';
+                document.getElementById('confirmar-senha').value = '';
+                esconderAlerta();
+            });
+
+            document.getElementById('form-perfil').addEventListener('submit', validarFormulario);
+        });
+
+        async function carregarPerfil() {
+            try {
+                const response = await fetch('/api/dados_usuario');
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                const usuario = await response.json();
+
+                // Campos editáveis
+                document.getElementById('nome').value = usuario.nome || '';
+                document.getElementById('email').value = usuario.e_mail || '';
+                dadosOriginais = { nome: usuario.nome || '', email: usuario.e_mail || '' };
+
+                // Cabeçalho
+                document.getElementById('profile-title').innerText = usuario.nome || 'Usuário';
+                document.getElementById('profile-email').innerText = usuario.e_mail || '—';
+                document.getElementById('profile-role').innerText =
+                    usuario.nome_perfil || (usuario.id_perfil === 1 ? 'Administrador do Sistema' : 'Usuário Padrão');
+                document.getElementById('avatar-letra').innerText =
+                    (usuario.nome || '?').trim().charAt(0).toUpperCase();
+
+                // Estatísticas
+                const e = usuario.estatisticas || {};
+                document.getElementById('stat-abertos').innerText    = e.abertos ?? 0;
+                document.getElementById('stat-andamento').innerText  = e.andamento ?? 0;
+                document.getElementById('stat-concluidos').innerText = e.concluidos ?? 0;
+
+            } catch (error) {
+                console.error('Erro ao carregar dados do usuário:', error);
+                mostrarAlerta('Não foi possível carregar seus dados. Verifique se o servidor está rodando.');
+                document.getElementById('profile-title').innerText = 'Erro ao carregar';
+            }
+        }
+
+        function validarFormulario(evento) {
+            const senha = document.getElementById('senha').value;
+            const confirmar = document.getElementById('confirmar-senha').value;
+
+            if (senha || confirmar) {
+                if (senha !== confirmar) {
+                    evento.preventDefault();
+                    mostrarAlerta('As senhas não coincidem. Digite a mesma senha nos dois campos.');
+                    return;
+                }
+                if (senha.length < 4) {
+                    evento.preventDefault();
+                    mostrarAlerta('A nova senha deve ter pelo menos 4 caracteres.');
+                    return;
+                }
+            }
+            esconderAlerta();
+        }
+
+        function mostrarAlerta(texto) {
+            const box = document.getElementById('alerta-cliente');
+            box.innerText = texto;
+            box.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function esconderAlerta() {
+            document.getElementById('alerta-cliente').style.display = 'none';
+        }
+
+        // Função para carregar os chamados do próprio usuário
+async function carregarMeusChamados() {
+    const tbody = document.getElementById('tabela-meus-chamados');
+    if (!tbody) return;
+
+    try {
+        // A rota /api/chamados já filtra automaticamente pelo usuário logado se não for admin
+        const res = await fetch('/api/chamados');
+        if (!res.ok) throw new Error('Erro ao buscar chamados');
+        
+        const chamados = await res.json();
+
+        if (chamados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Você ainda não abriu nenhum chamado.</td></tr>`;
+            return;
+        }
+
+        // Pega apenas os 5 mais recentes para a tela de perfil
+        const recentes = chamados.slice(0, 5);
+
+        tbody.innerHTML = "";
+        recentes.forEach(c => {
+            const tr = document.createElement("tr");
+            // Define a classe da cor do status
+            let statusClass = "ativo";
+            if (c.nome_status === "Aberto") statusClass = "ativo";
+            if (c.nome_status === "Em Atendimento") statusClass = "manutencao";
+            if (c.nome_status === "Concluído") statusClass = "manutencao"; // Pode ajustar a cor
+            if (c.nome_status === "Cancelado") statusClass = "manutencao";
+
+            tr.innerHTML = `
+                <td>#${c.id_chamado}</td>
+                <td>${escapeHtml(c.data_abertura)}</td>
+                <td>${escapeHtml(c.nome_patrimonio)}</td>
+                <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(c.descricao_problema)}
+                </td>
+                <td><span class="status ${statusClass}">${escapeHtml(c.nome_status)}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Erro ao carregar chamados.</td></tr>`;
+    }
+}
+
+// Adicione a chamada dela no DOMContentLoaded que já existe no perfil.html
+document.addEventListener('DOMContentLoaded', () => {
+    // ... código existente do perfil ...
+    carregarMeusChamados(); // <--- Adicione esta linha
+});
+    </script>
+    <script src="avisos.js"></script>
+    <script src="menu.js"></script>
+    <script src="notificacoes.js"></script>
+</body>
+</html>
