@@ -3088,6 +3088,7 @@ def api_backup_excluir(nome):
 # MÓDULO - MOVIMENTAÇÕES
 # ==========================================
 @app.route("/api/movimentacoes", methods=["GET"])
+@login_required
 def api_listar_movimentacoes():
     sala_origem = request.args.get("sala_origem", type=int)
     sala_destino = request.args.get("sala_destino", type=int)
@@ -3205,6 +3206,7 @@ def api_criar_movimentacao():
 
 
 @app.route("/api/movimentacoes/resumo", methods=["GET"])
+@login_required
 def api_movimentacoes_resumo():
     conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
     resumo = {"total_movimentacoes": 0, "total_itens_movimentados": 0, "salas_envolvidas": 0, "ultima_movimentacao": None}
