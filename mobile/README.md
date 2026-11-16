@@ -30,6 +30,8 @@ npm run build
 - Listagem de chamados
 - Histórico de movimentações, resumo e filtro local
 
+Consulte [MIGRATION_STATUS.md](./MIGRATION_STATUS.md) para a matriz das rotas Flask existentes e das telas que ainda faltam.
+
 ## Integração de patrimônio
 O cadastro mobile utiliza os contratos existentes do Flask:
 - `GET /api/inventario/filtros`: carrega categorias, salas e status.

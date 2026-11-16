@@ -52,7 +52,7 @@ export class PatrimonioFormPage implements OnInit {
     const valor = Number(this.form.valor_compra);
     const taxa = Number(this.form.taxa_depreciacao);
 
-    if (!nome || !numero || !this.form.data_aquisicao || !this.form.id_categoria) {
+    if (!nome || !numero || !this.form.valor_compra.trim() || !this.form.data_aquisicao || !this.form.taxa_depreciacao.trim() || !this.form.id_categoria) {
       this.erro = 'Preencha nome, número patrimonial, data de aquisição e categoria.';
       return;
     }
