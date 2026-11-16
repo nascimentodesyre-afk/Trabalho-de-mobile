@@ -1,1 +1,49 @@
-<ion-header><ion-toolbar><ion-buttons slot="start"><ion-back-button defaultHref="/home"></ion-back-button></ion-buttons><ion-title>Inventário</ion-title></ion-toolbar></ion-header><ion-content><div class="page-wrap"><ion-searchbar [(ngModel)]="busca" placeholder="Buscar por nome, número ou sala"></ion-searchbar><div class="empty-state" *ngIf="carregando"><ion-spinner></ion-spinner><p>Carregando patrimônio...</p></div><ion-text color="danger" *ngIf="erro"><p>{{erro}}</p></ion-text><ion-card *ngFor="let item of filtrados"><ion-card-content><div class="item-head"><strong>{{item.nome}}</strong><ion-badge color="success">{{item.nome_status||'Ativo'}}</ion-badge></div><p class="muted">Patrimônio nº {{item.numero_patrimonio}}</p><div class="details"><span><ion-icon name="location-outline"></ion-icon> {{item.nome_sala||'Não alocado'}}</span><strong>{{item.valor_atual|currency:'BRL'}}</strong></div></ion-card-content></ion-card><div class="empty-state" *ngIf="!carregando&&!erro&&filtrados.length===0">Nenhum patrimônio encontrado.</div></div></ion-content>
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Inventário</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="page-wrap">
+    <ion-searchbar [(ngModel)]="busca" placeholder="Buscar por nome, número ou sala"></ion-searchbar>
+
+    <ion-button
+      *ngIf="podeCadastrar"
+      expand="block"
+      routerLink="/patrimonio/novo">
+      <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+      Cadastrar patrimônio
+    </ion-button>
+
+    <div class="empty-state" *ngIf="carregando">
+      <ion-spinner></ion-spinner>
+      <p>Carregando patrimônio...</p>
+    </div>
+
+    <ion-text color="danger" *ngIf="erro">
+      <p>{{ erro }}</p>
+    </ion-text>
+
+    <ion-card *ngFor="let item of filtrados">
+      <ion-card-content>
+        <div class="item-head">
+          <strong>{{ item.nome }}</strong>
+          <ion-badge color="success">{{ item.nome_status || 'Ativo' }}</ion-badge>
+        </div>
+        <p class="muted">Patrimônio nº {{ item.numero_patrimonio }}</p>
+        <div class="details">
+          <span><ion-icon name="location-outline"></ion-icon> {{ item.nome_sala || 'Não alocado' }}</span>
+          <strong>{{ item.valor_atual | currency:'BRL' }}</strong>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <div class="empty-state" *ngIf="!carregando && !erro && filtrados.length === 0">
+      Nenhum patrimônio encontrado.
+    </div>
+  </div>
+</ion-content>

@@ -1,1 +1,36 @@
-import{NgModule}from'@angular/core';import{BrowserModule}from'@angular/platform-browser';import{RouteReuseStrategy}from'@angular/router';import{HttpClientModule}from'@angular/common/http';import{FormsModule}from'@angular/forms';import{IonicModule,IonicRouteStrategy}from'@ionic/angular';import{AppComponent}from'./app.component';import{AppRoutingModule}from'./app-routing.module';import{LoginPage}from'./pages/login/login.page';import{HomePage}from'./pages/home/home.page';import{InventoryPage}from'./pages/inventory/inventory.page';import{TicketsPage}from'./pages/tickets/tickets.page';import{MovementsPage}from'./pages/movements/movements.page';@NgModule({declarations:[AppComponent,LoginPage,HomePage,InventoryPage,TicketsPage,MovementsPage],imports:[BrowserModule,HttpClientModule,FormsModule,IonicModule.forRoot(),AppRoutingModule],providers:[{provide:RouteReuseStrategy,useClass:IonicRouteStrategy}],bootstrap:[AppComponent]})export class AppModule{}
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { RouteReuseStrategy } from '@angular/router';
+import { HttpClientModule } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
+import { AppComponent } from './app.component';
+import { AppRoutingModule } from './app-routing.module';
+import { LoginPage } from './pages/login/login.page';
+import { HomePage } from './pages/home/home.page';
+import { InventoryPage } from './pages/inventory/inventory.page';
+import { PatrimonioFormPage } from './pages/patrimonio-form/patrimonio-form.page';
+import { TicketsPage } from './pages/tickets/tickets.page';
+import { MovementsPage } from './pages/movements/movements.page';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    LoginPage,
+    HomePage,
+    InventoryPage,
+    PatrimonioFormPage,
+    TicketsPage,
+    MovementsPage
+  ],
+  imports: [
+    BrowserModule,
+    HttpClientModule,
+    FormsModule,
+    IonicModule.forRoot(),
+    AppRoutingModule
+  ],
+  providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy }],
+  bootstrap: [AppComponent]
+})
+export class AppModule {}

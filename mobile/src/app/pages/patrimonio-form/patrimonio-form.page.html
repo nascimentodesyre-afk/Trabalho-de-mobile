@@ -1,0 +1,145 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/inventario"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Novo patrimônio</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="page-wrap">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Cadastro de patrimônio</ion-card-title>
+        <ion-card-subtitle>Informe os dados básicos do bem.</ion-card-subtitle>
+      </ion-card-header>
+
+      <ion-card-content>
+        <div class="empty-state" *ngIf="carregandoFiltros">
+          <ion-spinner></ion-spinner>
+          <p>Carregando categorias e salas...</p>
+        </div>
+
+        <ion-text color="danger" *ngIf="erro">
+          <p role="alert">{{ erro }}</p>
+        </ion-text>
+        <ion-text color="success" *ngIf="sucesso">
+          <p role="status">{{ sucesso }}</p>
+        </ion-text>
+
+        <form *ngIf="!carregandoFiltros" (ngSubmit)="salvar()">
+          <ion-item>
+            <ion-input
+              label="Nome do bem"
+              labelPlacement="stacked"
+              name="nome"
+              [(ngModel)]="form.nome"
+              maxlength="150"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-input
+              label="Número patrimonial"
+              labelPlacement="stacked"
+              name="numero_patrimonio"
+              [(ngModel)]="form.numero_patrimonio"
+              inputmode="numeric"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-input
+              label="Valor de compra (R$)"
+              labelPlacement="stacked"
+              name="valor_compra"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              [(ngModel)]="form.valor_compra"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-input
+              label="Data de aquisição"
+              labelPlacement="stacked"
+              name="data_aquisicao"
+              type="date"
+              [(ngModel)]="form.data_aquisicao"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-input
+              label="Taxa anual de depreciação (%)"
+              labelPlacement="stacked"
+              name="taxa_depreciacao"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              [(ngModel)]="form.taxa_depreciacao"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-select
+              label="Categoria"
+              labelPlacement="stacked"
+              name="id_categoria"
+              interface="popover"
+              placeholder="Selecione uma categoria"
+              [(ngModel)]="form.id_categoria"
+              required>
+              <ion-select-option
+                *ngFor="let categoria of categorias"
+                [value]="categoria.id_categoria">
+                {{ categoria.nome }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-select
+              label="Sala (opcional)"
+              labelPlacement="stacked"
+              name="id_sala"
+              interface="popover"
+              placeholder="Não alocado"
+              [(ngModel)]="form.id_sala">
+              <ion-select-option value="">Não alocado</ion-select-option>
+              <ion-select-option *ngFor="let sala of salas" [value]="sala.id_sala">
+                {{ sala.nome }}{{ sala.bloco ? ' — ' + sala.bloco : '' }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button expand="block" type="submit" class="submit-button" [disabled]="salvando">
+            <ion-spinner *ngIf="salvando" name="crescent"></ion-spinner>
+            <span *ngIf="!salvando">Cadastrar patrimônio</span>
+          </ion-button>
+        </form>
+
+        <ion-button
+          *ngIf="sucesso"
+          expand="block"
+          fill="outline"
+          (click)="voltarAoInventario()">
+          Voltar ao inventário
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-note color="medium">
+      O cadastro é restrito a administradores pelo próprio backend Flask. A tela não substitui essa autorização.
+    </ion-note>
+  </div>
+</ion-content>

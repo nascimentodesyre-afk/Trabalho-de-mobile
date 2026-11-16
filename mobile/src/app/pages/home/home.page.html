@@ -1,1 +1,88 @@
-<ion-header><ion-toolbar><ion-title>IPE Mobile</ion-title><ion-buttons slot="end"><ion-button (click)="sair()"><ion-icon name="log-out-outline" slot="icon-only"></ion-icon></ion-button></ion-buttons></ion-toolbar></ion-header><ion-content><div class="page-wrap"><div class="welcome"><p class="muted">Bem-vindo(a),</p><h1>{{user?.nome||'Usuário'}}</h1><ion-badge color="warning">{{user?.nome_perfil||(user?.id_perfil===1?'Patrimônio':'Usuário padrão')}}</ion-badge></div><h2 class="section-title">Acesso rápido</h2><ion-grid><ion-row><ion-col size="6"><ion-card button routerLink="/inventario"><ion-card-content><ion-icon name="cube-outline" color="warning"></ion-icon><h2>Inventário</h2><p>Consultar bens cadastrados</p></ion-card-content></ion-card></ion-col><ion-col size="6"><ion-card button routerLink="/chamados"><ion-card-content><ion-icon name="construct-outline" color="warning"></ion-icon><h2>Chamados</h2><p>Acompanhar solicitações</p></ion-card-content></ion-card></ion-col><ion-col size="6"><ion-card button routerLink="/movimentacoes"><ion-card-content><ion-icon name="swap-horizontal-outline" color="warning"></ion-icon><h2>Movimentações</h2><p>Consultar transferências entre salas</p></ion-card-content></ion-card></ion-col></ion-row></ion-grid><h2 class="section-title">Resumo dos chamados</h2><ion-grid><ion-row><ion-col size="6"><ion-card class="stat"><ion-card-content><strong>{{user?.estatisticas?.total??0}}</strong><span>Total</span></ion-card-content></ion-card></ion-col><ion-col size="6"><ion-card class="stat"><ion-card-content><strong>{{user?.estatisticas?.abertos??0}}</strong><span>Abertos</span></ion-card-content></ion-card></ion-col><ion-col size="6"><ion-card class="stat"><ion-card-content><strong>{{user?.estatisticas?.andamento??0}}</strong><span>Em atendimento</span></ion-card-content></ion-card></ion-col><ion-col size="6"><ion-card class="stat"><ion-card-content><strong>{{user?.estatisticas?.concluidos??0}}</strong><span>Concluídos</span></ion-card-content></ion-card></ion-col></ion-row></ion-grid></div></ion-content>
+<ion-header>
+  <ion-toolbar>
+    <ion-title>IPE Mobile</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="sair()">
+        <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="page-wrap">
+    <div class="welcome">
+      <p class="muted">Bem-vindo(a),</p>
+      <h1>{{ user?.nome || 'Usuário' }}</h1>
+      <ion-badge color="warning">{{ user?.nome_perfil || (user?.id_perfil === 1 ? 'Administrador' : 'Usuário padrão') }}</ion-badge>
+    </div>
+
+    <h2 class="section-title">Acesso rápido</h2>
+    <ion-grid>
+      <ion-row>
+        <ion-col size="6">
+          <ion-card button routerLink="/inventario">
+            <ion-card-content>
+              <ion-icon name="cube-outline" color="warning"></ion-icon>
+              <h2>Inventário</h2>
+              <p>Consultar bens cadastrados</p>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6" *ngIf="user?.id_perfil === 1">
+          <ion-card button routerLink="/patrimonio/novo">
+            <ion-card-content>
+              <ion-icon name="add-circle-outline" color="warning"></ion-icon>
+              <h2>Novo patrimônio</h2>
+              <p>Cadastrar um bem no sistema</p>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6">
+          <ion-card button routerLink="/chamados">
+            <ion-card-content>
+              <ion-icon name="construct-outline" color="warning"></ion-icon>
+              <h2>Chamados</h2>
+              <p>Acompanhar solicitações</p>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6">
+          <ion-card button routerLink="/movimentacoes">
+            <ion-card-content>
+              <ion-icon name="swap-horizontal-outline" color="warning"></ion-icon>
+              <h2>Movimentações</h2>
+              <p>Consultar transferências entre salas</p>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+
+    <h2 class="section-title">Resumo dos chamados</h2>
+    <ion-grid>
+      <ion-row>
+        <ion-col size="6">
+          <ion-card class="stat">
+            <ion-card-content><strong>{{ user?.estatisticas?.total ?? 0 }}</strong><span>Total</span></ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6">
+          <ion-card class="stat">
+            <ion-card-content><strong>{{ user?.estatisticas?.abertos ?? 0 }}</strong><span>Abertos</span></ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6">
+          <ion-card class="stat">
+            <ion-card-content><strong>{{ user?.estatisticas?.andamento ?? 0 }}</strong><span>Em atendimento</span></ion-card-content>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6">
+          <ion-card class="stat">
+            <ion-card-content><strong>{{ user?.estatisticas?.concluidos ?? 0 }}</strong><span>Concluídos</span></ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>
